@@ -5,6 +5,12 @@ spring:
   application:
     name: api-gateway
 
+  # 禁用 DataSource 自动配置（Gateway 不需要数据库）
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
   # 测试环境禁用 Nacos
   cloud:
     nacos:
@@ -65,3 +71,11 @@ management:
   endpoint:
     health:
       show-details: always
+
+# OpenTelemetry 配置(测试环境禁用)
+otel:
+  sdk:
+    disabled: true
+  instrumentation:
+    spring-boot:
+      enabled: false

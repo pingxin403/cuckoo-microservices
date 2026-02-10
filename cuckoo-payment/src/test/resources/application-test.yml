@@ -1,22 +1,41 @@
 spring:
-  cloud:
-    nacos:
-      config:
-        import-check:
-          enabled: false
-      discovery:
-        enabled: false
-  kafka:
-    bootstrap-servers: localhost:9092
+  application:
+    name: payment-service
+    database-name: payment_test_db
+
+  # H2 内存数据库配置(测试环境)
   datasource:
-    url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:payment_test_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password:
+
+  # JPA 配置
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: false
-  h2:
-    console:
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  # Kafka 配置(测试环境禁用)
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+
+  # Nacos 配置(测试环境禁用)
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+# OpenTelemetry 配置(测试环境禁用)
+otel:
+  sdk:
+    disabled: true
+  instrumentation:
+    spring-boot:
       enabled: false

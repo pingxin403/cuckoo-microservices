@@ -45,6 +45,14 @@ feign:
   sentinel:
     enabled: false
 
+# OpenTelemetry 配置（测试环境禁用）
+otel:
+  sdk:
+    disabled: true
+  instrumentation:
+    spring-boot:
+      enabled: false
+
 # 订单服务自定义配置
 order:
   timeout:
