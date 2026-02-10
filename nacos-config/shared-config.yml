@@ -1,0 +1,109 @@
+# ============================================================
+# Nacos 共享配置（所有微服务公共连接参数）
+# 各微服务通过 spring.cloud.nacos.config.shared-configs 引用此配置
+# 仅需在各自 application.yml 中配置差异化参数（服务名、端口、数据库名）
+# ============================================================
+
+spring:
+  # MySQL 数据源配置模板
+  # 各服务通过设置 spring.application.database-name 指定数据库名
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: root
+    password: root
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+  # JPA 配置
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # Kafka 消息队列配置
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: com.pingxin403.cuckoo.*
+
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+
+  # Nacos 服务发现配置
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+# Seata 分布式事务配置
+seata:
+  enabled: true
+  tx-service-group: cuckoo_tx_group
+  service:
+    vgroup-mapping:
+      cuckoo_tx_group: default
+  registry:
+    type: nacos
+    nacos:
+      server-addr: localhost:8848
+      namespace: ""
+      group: DEFAULT_GROUP
+
+# Spring Boot Actuator 配置（可观测性）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# OpenTelemetry 链路追踪配置
+otel:
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+  resource:
+    attributes:
+      service.name: ${spring.application.name}
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.pingxin403.cuckoo: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [traceId=%X{traceId}] %msg%n"

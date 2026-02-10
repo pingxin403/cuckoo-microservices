@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
+      discovery:
+        enabled: false
+  kafka:
+    bootstrap-servers: localhost:9092
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  h2:
+    console:
+      enabled: false

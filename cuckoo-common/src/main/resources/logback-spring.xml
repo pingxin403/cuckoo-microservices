@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    通用结构化日志配置（JSON 格式 + traceId）
+    各微服务通过依赖 cuckoo-common 自动引入此配置。
+    日志输出为 JSON 格式，包含 traceId 字段以便与链路追踪关联。
+-->
+<configuration>
+
+    <!-- 从 Spring 环境中读取应用名称 -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="cuckoo-app"/>
+
+    <!-- 控制台输出 - JSON 格式 -->
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <customFields>{"service":"${APP_NAME}"}</customFields>
+            <timeZone>UTC</timeZone>
+        </encoder>
+    </appender>
+
+    <!-- 控制台输出 - 普通文本格式（开发环境使用） -->
+    <appender name="CONSOLE_TEXT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId:-}] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 生产环境 profile：使用 JSON 格式输出 -->
+    <springProfile name="prod,production">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- 开发环境 profile：使用文本格式输出（便于阅读） -->
+    <springProfile name="dev,default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_TEXT"/>
+        </root>
+    </springProfile>
+
+    <!-- 降低第三方库日志级别 -->
+    <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="com.pingxin403.cuckoo" level="DEBUG"/>
+
+</configuration>

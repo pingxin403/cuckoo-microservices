@@ -1,0 +1,96 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: inventory-service
+    database-name: inventory_db
+
+  # MySQL 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: root
+    password: root
+
+  # JPA 配置
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 5000ms
+
+  # Kafka 配置
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: inventory-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.pingxin403.cuckoo.*
+
+  # Nacos 配置
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+      config:
+        server-addr: localhost:8848
+        file-extension: yml
+        shared-configs:
+          - data-id: shared-config.yml
+            group: DEFAULT_GROUP
+            refresh: true
+
+# Seata 分布式事务配置
+seata:
+  enabled: true
+  tx-service-group: cuckoo_tx_group
+  service:
+    vgroup-mapping:
+      cuckoo_tx_group: default
+
+# 库存服务自定义配置
+inventory:
+  lock:
+    timeout: 5
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+
+# OpenTelemetry 配置
+otel:
+  service:
+    name: ${spring.application.name}
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+  traces:
+    exporter: otlp
+  metrics:
+    exporter: none
+  logs:
+    exporter: none

@@ -1,0 +1,126 @@
+package com.pingxin403.cuckoo.order.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
+import com.pingxin403.cuckoo.order.dto.OrderDTO;
+import com.pingxin403.cuckoo.order.service.OrderService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(OrderController.class)
+@ActiveProfiles("test")
+class OrderControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private OrderService orderService;
+
+    private OrderDTO testOrderDTO;
+
+    @BeforeEach
+    void setUp() {
+        testOrderDTO = new OrderDTO(
+                1L,
+                "ORD123456",
+                1L,
+                100L,
+                "Test Product",
+                2,
+                new BigDecimal("50.00"),
+                new BigDecimal("100.00"),
+                "PENDING_PAYMENT",
+                null,
+                1L,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    @Test
+    void createOrder_shouldReturnCreatedOrder() throws Exception {
+        CreateOrderRequest request = new CreateOrderRequest(1L, 100L, 2);
+        when(orderService.createOrder(any(CreateOrderRequest.class))).thenReturn(testOrderDTO);
+
+        mockMvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.orderNo").value("ORD123456"))
+                .andExpect(jsonPath("$.status").value("PENDING_PAYMENT"))
+                .andExpect(jsonPath("$.totalAmount").value(100.00));
+    }
+
+    @Test
+    void getOrder_shouldReturnOrder() throws Exception {
+        when(orderService.getOrder(1L)).thenReturn(testOrderDTO);
+
+        mockMvc.perform(get("/api/orders/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.orderNo").value("ORD123456"));
+    }
+
+    @Test
+    void getOrder_shouldReturn404WhenNotFound() throws Exception {
+        when(orderService.getOrder(999L)).thenThrow(new ResourceNotFoundException("订单不存在"));
+
+        mockMvc.perform(get("/api/orders/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getUserOrders_shouldReturnOrderList() throws Exception {
+        List<OrderDTO> orders = Arrays.asList(testOrderDTO);
+        when(orderService.getUserOrders(1L)).thenReturn(orders);
+
+        mockMvc.perform(get("/api/orders/user/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].orderNo").value("ORD123456"));
+    }
+
+    @Test
+    void cancelOrder_shouldReturnCancelledOrder() throws Exception {
+        testOrderDTO.setStatus("CANCELLED");
+        testOrderDTO.setCancelReason("用户主动取消");
+        when(orderService.cancelOrder(1L)).thenReturn(testOrderDTO);
+
+        mockMvc.perform(put("/api/orders/1/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelReason").value("用户主动取消"));
+    }
+
+    @Test
+    void cancelOrder_shouldReturn404WhenNotFound() throws Exception {
+        when(orderService.cancelOrder(999L)).thenThrow(new ResourceNotFoundException("订单不存在"));
+
+        mockMvc.perform(put("/api/orders/999/cancel"))
+                .andExpect(status().isNotFound());
+    }
+}

@@ -1,0 +1,67 @@
+server:
+  port: 0  # 随机端口，避免测试时端口冲突
+
+spring:
+  application:
+    name: api-gateway
+
+  # 测试环境禁用 Nacos
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+    # Spring Cloud Gateway 路由配置（与主配置相同）
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # 用户服务路由
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+
+        # 商品服务路由
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/api/products/**
+
+        # 库存服务路由
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+
+        # 订单服务路由
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+
+        # 支付服务路由
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+
+        # 通知服务路由
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
