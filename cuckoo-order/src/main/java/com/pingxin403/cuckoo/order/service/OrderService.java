@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.order.service;
 
+import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.event.OrderCancelledEvent;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.order.client.InventoryClient;
@@ -11,7 +12,6 @@ import com.pingxin403.cuckoo.order.repository.OrderRepository;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +33,7 @@ public class OrderService {
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
     private final PaymentClient paymentClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final EventPublisher eventPublisher;
 
     /**
      * 创建订单（Seata 全局事务）
@@ -148,8 +148,7 @@ public class OrderService {
                 order.getQuantity(),
                 "用户主动取消"
         );
-        kafkaTemplate.send("order-events", order.getId().toString(), event);
-        log.info("发布 OrderCancelledEvent: eventId={}, orderId={}", event.getEventId(), order.getId());
+        eventPublisher.publish("order-events", order.getId().toString(), event);
 
         return OrderDTO.fromEntity(order);
     }
@@ -196,8 +195,7 @@ public class OrderService {
                 order.getQuantity(),
                 "支付超时"
         );
-        kafkaTemplate.send("order-events", order.getId().toString(), event);
-        log.info("发布 OrderCancelledEvent: eventId={}, orderId={}", event.getEventId(), order.getId());
+        eventPublisher.publish("order-events", order.getId().toString(), event);
     }
 
     /**

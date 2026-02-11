@@ -1,11 +1,11 @@
 package com.pingxin403.cuckoo.inventory.controller;
 
+import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.inventory.dto.InitInventoryRequest;
 import com.pingxin403.cuckoo.inventory.dto.InventoryDTO;
 import com.pingxin403.cuckoo.inventory.dto.InventoryOperationRequest;
 import com.pingxin403.cuckoo.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
-public class InventoryController {
+public class InventoryController extends BaseController {
 
     private final InventoryService inventoryService;
 
@@ -26,8 +26,10 @@ public class InventoryController {
      */
     @PostMapping("/init")
     public ResponseEntity<InventoryDTO> initInventory(@RequestBody InitInventoryRequest request) {
+        logRequest("初始化库存", request.getSkuId(), request.getTotalStock());
         InventoryDTO inventory = inventoryService.initInventory(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(inventory);
+        logResponse("初始化库存", inventory.getId());
+        return created(inventory);
     }
 
     /**
@@ -36,8 +38,10 @@ public class InventoryController {
      */
     @PostMapping("/reserve")
     public ResponseEntity<Void> reserveStock(@RequestBody InventoryOperationRequest request) {
+        logRequest("预占库存", request.getSkuId(), request.getQuantity());
         inventoryService.reserveStock(request);
-        return ResponseEntity.ok().build();
+        logResponse("预占库存", "成功");
+        return ok(null);
     }
 
     /**
@@ -46,8 +50,10 @@ public class InventoryController {
      */
     @PostMapping("/deduct")
     public ResponseEntity<Void> deductStock(@RequestBody InventoryOperationRequest request) {
+        logRequest("扣减库存", request.getSkuId(), request.getQuantity());
         inventoryService.deductStock(request);
-        return ResponseEntity.ok().build();
+        logResponse("扣减库存", "成功");
+        return ok(null);
     }
 
     /**
@@ -56,8 +62,10 @@ public class InventoryController {
      */
     @PostMapping("/release")
     public ResponseEntity<Void> releaseStock(@RequestBody InventoryOperationRequest request) {
+        logRequest("释放库存", request.getSkuId(), request.getQuantity());
         inventoryService.releaseStock(request);
-        return ResponseEntity.ok().build();
+        logResponse("释放库存", "成功");
+        return ok(null);
     }
 
     /**
@@ -66,7 +74,9 @@ public class InventoryController {
      */
     @GetMapping("/{skuId}")
     public ResponseEntity<InventoryDTO> getInventory(@PathVariable Long skuId) {
+        logRequest("查询库存", skuId);
         InventoryDTO inventory = inventoryService.getInventoryBySkuId(skuId);
-        return ResponseEntity.ok(inventory);
+        logResponse("查询库存", inventory.getId());
+        return ok(inventory);
     }
 }

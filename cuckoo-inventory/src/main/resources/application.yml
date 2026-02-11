@@ -1,7 +1,8 @@
-server:
-  port: 8083
-
+# 引入公共配置
 spring:
+  config:
+    import: classpath:application-common.yml
+
   application:
     name: inventory-service
     database-name: inventory_db
@@ -13,15 +14,11 @@ spring:
     username: root
     password: root
 
-  # JPA 配置
+  # JPA 服务特定配置
   jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
 
   # Redis 配置
   data:
@@ -42,18 +39,18 @@ spring:
       properties:
         spring.json.trusted.packages: com.pingxin403.cuckoo.*
 
-  # Nacos 配置
+  # Nacos 服务特定配置
   cloud:
     nacos:
-      discovery:
-        server-addr: localhost:8848
       config:
-        server-addr: localhost:8848
-        file-extension: yml
         shared-configs:
           - data-id: shared-config.yml
             group: DEFAULT_GROUP
             refresh: true
+
+# 服务端口
+server:
+  port: 8083
 
 # Seata 分布式事务配置
 seata:
@@ -68,29 +65,7 @@ inventory:
   lock:
     timeout: 5
 
-# Actuator 配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
-    health:
-      show-details: always
-  tracing:
-    sampling:
-      probability: 1.0
-
-# OpenTelemetry 配置
+# OpenTelemetry 服务名（覆盖公共配置）
 otel:
   service:
     name: ${spring.application.name}
-  exporter:
-    otlp:
-      endpoint: http://localhost:4317
-  traces:
-    exporter: otlp
-  metrics:
-    exporter: none
-  logs:
-    exporter: none

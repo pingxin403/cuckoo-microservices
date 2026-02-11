@@ -1,7 +1,8 @@
-server:
-  port: 8084
-
+# 引入公共配置
 spring:
+  config:
+    import: classpath:application-common.yml
+
   application:
     name: order-service
     database-name: order_db
@@ -13,15 +14,11 @@ spring:
     username: root
     password: root
 
-  # JPA 配置
+  # JPA 服务特定配置
   jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
 
   # Kafka 配置
   kafka:
@@ -38,18 +35,23 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-  # Nacos 配置
+  # Nacos 服务特定配置
   cloud:
     nacos:
-      discovery:
-        server-addr: localhost:8848
       config:
-        server-addr: localhost:8848
-        file-extension: yml
         shared-configs:
           - data-id: shared-config.yml
             group: DEFAULT_GROUP
             refresh: true
+    # Sentinel 熔断降级配置
+    sentinel:
+      transport:
+        dashboard: localhost:8080
+        port: 8719
+
+# 服务端口
+server:
+  port: 8084
 
 # Seata 分布式事务配置
 seata:
@@ -58,12 +60,6 @@ seata:
   service:
     vgroup-mapping:
       cuckoo_tx_group: default
-
-# Sentinel 熔断降级配置
-spring.cloud.sentinel:
-  transport:
-    dashboard: localhost:8080
-    port: 8719
 
 # OpenFeign 配置
 feign:
@@ -80,29 +76,7 @@ order:
   timeout:
     minutes: 30
 
-# Actuator 配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
-    health:
-      show-details: always
-  tracing:
-    sampling:
-      probability: 1.0
-
-# OpenTelemetry 配置
+# OpenTelemetry 服务名（覆盖公共配置）
 otel:
   service:
     name: ${spring.application.name}
-  exporter:
-    otlp:
-      endpoint: http://localhost:4317
-  traces:
-    exporter: otlp
-  metrics:
-    exporter: none
-  logs:
-    exporter: none

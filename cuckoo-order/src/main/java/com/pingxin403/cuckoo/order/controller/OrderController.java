@@ -1,11 +1,10 @@
 package com.pingxin403.cuckoo.order.controller;
 
+import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.OrderDTO;
 import com.pingxin403.cuckoo.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +13,10 @@ import java.util.List;
 /**
  * 订单控制器
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
-public class OrderController {
+public class OrderController extends BaseController {
 
     private final OrderService orderService;
 
@@ -27,10 +25,10 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<OrderDTO> createOrder(@RequestBody CreateOrderRequest request) {
-        log.info("收到创建订单请求: userId={}, skuId={}, quantity={}",
-                request.getUserId(), request.getSkuId(), request.getQuantity());
+        logRequest("创建订单", request.getUserId(), request.getSkuId(), request.getQuantity());
         OrderDTO order = orderService.createOrder(request);
-        return ResponseEntity.ok(order);
+        logResponse("创建订单", order.getId());
+        return ok(order);
     }
 
     /**
@@ -38,9 +36,10 @@ public class OrderController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<OrderDTO> getOrder(@PathVariable Long id) {
-        log.info("收到查询订单请求: orderId={}", id);
+        logRequest("查询订单", id);
         OrderDTO order = orderService.getOrder(id);
-        return ResponseEntity.ok(order);
+        logResponse("查询订单", order.getId());
+        return ok(order);
     }
 
     /**
@@ -48,9 +47,10 @@ public class OrderController {
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<OrderDTO>> getUserOrders(@PathVariable Long userId) {
-        log.info("收到查询用户订单列表请求: userId={}", userId);
+        logRequest("查询用户订单列表", userId);
         List<OrderDTO> orders = orderService.getUserOrders(userId);
-        return ResponseEntity.ok(orders);
+        logResponse("查询用户订单列表", orders.size() + " 个订单");
+        return ok(orders);
     }
 
     /**
@@ -58,8 +58,9 @@ public class OrderController {
      */
     @PutMapping("/{id}/cancel")
     public ResponseEntity<OrderDTO> cancelOrder(@PathVariable Long id) {
-        log.info("收到取消订单请求: orderId={}", id);
+        logRequest("取消订单", id);
         OrderDTO order = orderService.cancelOrder(id);
-        return ResponseEntity.ok(order);
+        logResponse("取消订单", order.getId());
+        return ok(order);
     }
 }

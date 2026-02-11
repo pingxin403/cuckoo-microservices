@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.payment.service;
 
+import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.payment.entity.Payment;
 import com.pingxin403.cuckoo.payment.repository.PaymentRepository;
@@ -9,7 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -26,7 +26,7 @@ class PaymentServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private EventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -63,7 +63,7 @@ class PaymentServiceTest {
         Payment result = paymentService.confirmPayment(1L);
 
         assertEquals(Payment.PaymentStatus.SUCCESS, result.getStatus());
-        verify(kafkaTemplate).send(anyString(), anyString(), any());
+        verify(eventPublisher).publish(anyString(), anyString(), any());
     }
 
     @Test
@@ -84,7 +84,7 @@ class PaymentServiceTest {
         Payment result = paymentService.failPayment(1L, "Insufficient funds");
 
         assertEquals(Payment.PaymentStatus.FAILED, result.getStatus());
-        verify(kafkaTemplate).send(anyString(), anyString(), any());
+        verify(eventPublisher).publish(anyString(), anyString(), any());
     }
 
     @Test

@@ -1,9 +1,9 @@
 package com.pingxin403.cuckoo.user.controller;
 
+import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.user.dto.*;
 import com.pingxin403.cuckoo.user.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-public class UserController {
+public class UserController extends BaseController {
 
     private final UserService userService;
 
@@ -24,8 +24,10 @@ public class UserController {
      */
     @PostMapping("/register")
     public ResponseEntity<UserDTO> register(@RequestBody RegisterRequest request) {
+        logRequest("用户注册", request.getUsername(), request.getEmail());
         UserDTO user = userService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+        logResponse("用户注册", user.getId());
+        return created(user);
     }
 
     /**
@@ -34,8 +36,10 @@ public class UserController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        logRequest("用户登录", request.getUsername());
         LoginResponse response = userService.login(request);
-        return ResponseEntity.ok(response);
+        logResponse("用户登录", response.getUserId());
+        return ok(response);
     }
 
     /**
@@ -44,7 +48,9 @@ public class UserController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
+        logRequest("查询用户", id);
         UserDTO user = userService.getUserById(id);
-        return ResponseEntity.ok(user);
+        logResponse("查询用户", user.getId());
+        return ok(user);
     }
 }

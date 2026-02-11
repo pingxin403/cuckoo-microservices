@@ -1,10 +1,6 @@
 spring:
   application:
-    name: order-service-test
-  
-  # Allow bean definition overriding for test mocks
-  main:
-    allow-bean-definition-overriding: true
+    name: product-service-test
   
   datasource:
     driver-class-name: org.h2.Driver
@@ -27,14 +23,6 @@ spring:
         enabled: false
       config:
         enabled: false
-    openfeign:
-      enabled: false
-  
-  autoconfigure:
-    exclude:
-      - org.springframework.cloud.openfeign.FeignAutoConfiguration
-      - org.springframework.cloud.openfeign.hateoas.FeignHalAutoConfiguration
-      - org.springframework.cloud.openfeign.loadbalancer.FeignLoadBalancerAutoConfiguration
 
 # Disable OpenTelemetry for tests
 otel:
@@ -45,7 +33,3 @@ otel:
 management:
   endpoints:
     enabled-by-default: false
-
-# Disable Seata for tests
-seata:
-  enabled: false

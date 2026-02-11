@@ -5,6 +5,7 @@ import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.OrderDTO;
 import com.pingxin403.cuckoo.order.service.OrderService;
+import com.pingxin403.cuckoo.order.TestOrderApplication;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +22,17 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(
+        classes = TestOrderApplication.class,
+        properties = {
+                "spring.kafka.bootstrap-servers=",
+                "spring.cloud.openfeign.client.config.default.url=http://localhost"
+        }
+)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class OrderControllerTest {

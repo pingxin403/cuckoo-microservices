@@ -1,10 +1,10 @@
 package com.pingxin403.cuckoo.product.controller;
 
+import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.product.dto.CreateProductRequest;
 import com.pingxin403.cuckoo.product.dto.ProductDTO;
 import com.pingxin403.cuckoo.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-public class ProductController {
+public class ProductController extends BaseController {
 
     private final ProductService productService;
 
@@ -27,8 +27,10 @@ public class ProductController {
      */
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@RequestBody CreateProductRequest request) {
+        logRequest("创建商品", request.getName(), request.getPrice());
         ProductDTO product = productService.createProduct(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(product);
+        logResponse("创建商品", product.getId());
+        return created(product);
     }
 
     /**
@@ -37,8 +39,10 @@ public class ProductController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
+        logRequest("查询商品", id);
         ProductDTO product = productService.getProductById(id);
-        return ResponseEntity.ok(product);
+        logResponse("查询商品", product.getId());
+        return ok(product);
     }
 
     /**
@@ -47,7 +51,9 @@ public class ProductController {
      */
     @GetMapping
     public ResponseEntity<List<ProductDTO>> getAllProducts() {
+        logRequest("查询所有商品");
         List<ProductDTO> products = productService.getAllProducts();
-        return ResponseEntity.ok(products);
+        logResponse("查询所有商品", products.size() + " 个商品");
+        return ok(products);
     }
 }

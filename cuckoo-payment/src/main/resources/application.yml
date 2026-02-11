@@ -1,20 +1,11 @@
-server:
-  port: 8085
-
+# 引入公共配置
 spring:
+  config:
+    import: classpath:application-common.yml
+
   application:
     name: payment-service
     database-name: payment_db
-
-  # Nacos Config 配置
-  cloud:
-    nacos:
-      config:
-        server-addr: localhost:8848
-        file-extension: yml
-        shared-configs:
-          - data-id: shared-config.yml
-            refresh: true
 
   # Kafka 配置（额外配置，补充共享配置）
   kafka:
@@ -23,29 +14,19 @@ spring:
     listener:
       ack-mode: manual
 
-# Actuator 配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
-    health:
-      show-details: always
-  tracing:
-    sampling:
-      probability: 1.0
+  # Nacos 服务特定配置
+  cloud:
+    nacos:
+      config:
+        shared-configs:
+          - data-id: shared-config.yml
+            refresh: true
 
-# OpenTelemetry 配置
+# 服务端口
+server:
+  port: 8085
+
+# OpenTelemetry 服务名（覆盖公共配置）
 otel:
   service:
     name: ${spring.application.name}
-  exporter:
-    otlp:
-      endpoint: http://localhost:4317
-  traces:
-    exporter: otlp
-  metrics:
-    exporter: none
-  logs:
-    exporter: none

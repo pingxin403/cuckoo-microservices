@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.order.service;
 
+import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.order.client.InventoryClient;
 import com.pingxin403.cuckoo.order.client.PaymentClient;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,7 +41,7 @@ class OrderServiceTest {
     private PaymentClient paymentClient;
 
     @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private EventPublisher eventPublisher;
 
     @InjectMocks
     private OrderService orderService;
@@ -180,7 +180,7 @@ class OrderServiceTest {
         assertEquals("用户主动取消", result.getCancelReason());
         verify(orderRepository).findById(1L);
         verify(orderRepository).save(any(Order.class));
-        verify(kafkaTemplate).send(eq("order-events"), anyString(), any());
+        verify(eventPublisher).publish(eq("order-events"), anyString(), any());
     }
 
     @Test
@@ -194,7 +194,7 @@ class OrderServiceTest {
 
         verify(orderRepository).findById(1L);
         verify(orderRepository, never()).save(any());
-        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
+        verify(eventPublisher, never()).publish(anyString(), anyString(), any());
     }
 
     @Test
@@ -244,7 +244,7 @@ class OrderServiceTest {
         orderService.cancelTimeoutOrder(testOrder);
 
         verify(orderRepository).save(any(Order.class));
-        verify(kafkaTemplate).send(eq("order-events"), anyString(), any());
+        verify(eventPublisher).publish(eq("order-events"), anyString(), any());
     }
 
     @Test
