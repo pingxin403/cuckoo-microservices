@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.payment.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.payment.dto.CreatePaymentRequest;
 import com.pingxin403.cuckoo.payment.dto.PaymentDTO;
@@ -17,6 +18,7 @@ public class PaymentController extends BaseController {
     private final PaymentService paymentService;
 
     @PostMapping
+    @SentinelResource(value = "POST:/api/payments")
     public ResponseEntity<PaymentDTO> createPayment(@RequestBody CreatePaymentRequest request) {
         logRequest("创建支付", request.getOrderId(), request.getUserId(), request.getAmount());
         Payment payment = new Payment();

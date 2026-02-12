@@ -66,3 +66,16 @@ server:
 otel:
   service:
     name: ${spring.application.name}
+
+# JWT 配置
+jwt:
+  secret: cuckoo-microservices-secret-key-for-jwt-token-generation-and-validation
+  expiration: 86400000  # 24 小时（毫秒）
+
+# Redis 配置
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms

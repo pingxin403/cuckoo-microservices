@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.user.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.user.dto.*;
 import com.pingxin403.cuckoo.user.service.UserService;
@@ -23,6 +24,7 @@ public class UserController extends BaseController {
      * POST /api/users/register
      */
     @PostMapping("/register")
+    @SentinelResource(value = "POST:/api/users/register")
     public ResponseEntity<UserDTO> register(@RequestBody RegisterRequest request) {
         logRequest("用户注册", request.getUsername(), request.getEmail());
         UserDTO user = userService.register(request);
@@ -51,6 +53,18 @@ public class UserController extends BaseController {
         logRequest("查询用户", id);
         UserDTO user = userService.getUserById(id);
         logResponse("查询用户", user.getId());
+        return ok(user);
+    }
+
+    /**
+     * 更新用户信息
+     * PUT /api/users/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest request) {
+        logRequest("更新用户", id, request.getEmail());
+        UserDTO user = userService.updateUser(id, request);
+        logResponse("更新用户", user.getId());
         return ok(user);
     }
 }

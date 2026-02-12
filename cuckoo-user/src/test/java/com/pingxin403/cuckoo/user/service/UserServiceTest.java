@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
  * UserService 单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class UserServiceTest {
 
     @Mock
@@ -33,6 +34,12 @@ class UserServiceTest {
 
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Mock
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
+    @Mock
+    private org.springframework.data.redis.core.ValueOperations<String, Object> valueOperations;
 
     @InjectMocks
     private UserService userService;
@@ -49,6 +56,9 @@ class UserServiceTest {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Mock RedisTemplate behavior
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
     // ========== Register Tests ==========
@@ -154,6 +164,7 @@ class UserServiceTest {
     @Test
     @DisplayName("getUserById - should return UserDTO when user exists")
     void getUserById_success() {
+        when(valueOperations.get("user:1")).thenReturn(null); // Cache miss
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
         UserDTO result = userService.getUserById(1L);
@@ -162,11 +173,14 @@ class UserServiceTest {
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getUsername()).isEqualTo("testuser");
         assertThat(result.getEmail()).isEqualTo("test@example.com");
+        
+        verify(valueOperations).set(eq("user:1"), any(UserDTO.class), eq(15L), eq(java.util.concurrent.TimeUnit.MINUTES));
     }
 
     @Test
     @DisplayName("getUserById - should throw ResourceNotFoundException when user not found")
     void getUserById_notFound() {
+        when(valueOperations.get("user:999")).thenReturn(null); // Cache miss
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.getUserById(999L))

@@ -27,10 +27,17 @@ import static org.mockito.Mockito.*;
  * ProductService 单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
+    @Mock
+    private org.springframework.data.redis.core.ValueOperations<String, Object> valueOperations;
 
     @InjectMocks
     private ProductService productService;
@@ -47,6 +54,9 @@ class ProductServiceTest {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Mock RedisTemplate behavior
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
     // ========== CreateProduct Tests ==========
@@ -99,6 +109,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("getProductById - should return ProductDTO when product exists")
     void getProductById_success() {
+        when(valueOperations.get("product:1")).thenReturn(null); // Cache miss
         when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
 
         ProductDTO result = productService.getProductById(1L);
@@ -108,11 +119,14 @@ class ProductServiceTest {
         assertThat(result.getName()).isEqualTo("Test Product");
         assertThat(result.getPrice()).isEqualByComparingTo(new BigDecimal("99.99"));
         assertThat(result.getDescription()).isEqualTo("A test product description");
+        
+        verify(valueOperations).set(eq("product:1"), any(ProductDTO.class), eq(30L), eq(java.util.concurrent.TimeUnit.MINUTES));
     }
 
     @Test
     @DisplayName("getProductById - should throw ResourceNotFoundException when product not found")
     void getProductById_notFound() {
+        when(valueOperations.get("product:999")).thenReturn(null); // Cache miss
         when(productRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.getProductById(999L))

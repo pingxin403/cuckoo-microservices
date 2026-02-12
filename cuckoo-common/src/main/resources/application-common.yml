@@ -36,6 +36,20 @@ spring:
       hibernate:
         format_sql: true
 
+  # Redis 公共配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
   # Nacos 公共配置
   cloud:
     nacos:
@@ -44,3 +58,19 @@ spring:
       config:
         server-addr: localhost:8848
         file-extension: yml
+    
+    # Sentinel 配置
+    sentinel:
+      transport:
+        # Sentinel Dashboard 地址
+        dashboard: localhost:8858
+        # 与 Dashboard 通信的端口，默认为 8719
+        # 如果端口被占用，会自动尝试 8719+1, 8719+2... 直到找到可用端口
+        port: 8719
+      # 饥饿加载，应用启动时立即连接 Dashboard
+      eager: true
+
+# Feign 配置
+feign:
+  sentinel:
+    enabled: true

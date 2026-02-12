@@ -1,8 +1,10 @@
 package com.pingxin403.cuckoo.product.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.product.dto.CreateProductRequest;
 import com.pingxin403.cuckoo.product.dto.ProductDTO;
+import com.pingxin403.cuckoo.product.dto.UpdateProductRequest;
 import com.pingxin403.cuckoo.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +40,7 @@ public class ProductController extends BaseController {
      * GET /api/products/{id}
      */
     @GetMapping("/{id}")
+    @SentinelResource(value = "GET:/api/products/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
         logRequest("查询商品", id);
         ProductDTO product = productService.getProductById(id);
@@ -55,5 +58,17 @@ public class ProductController extends BaseController {
         List<ProductDTO> products = productService.getAllProducts();
         logResponse("查询所有商品", products.size() + " 个商品");
         return ok(products);
+    }
+
+    /**
+     * 更新商品
+     * PUT /api/products/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody UpdateProductRequest request) {
+        logRequest("更新商品", id, request.getName());
+        ProductDTO product = productService.updateProduct(id, request);
+        logResponse("更新商品", product.getId());
+        return ok(product);
     }
 }

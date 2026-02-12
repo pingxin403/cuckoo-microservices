@@ -1,5 +1,6 @@
 package com.pingxin403.cuckoo.order.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.OrderDTO;
@@ -24,6 +25,7 @@ public class OrderController extends BaseController {
      * 创建订单
      */
     @PostMapping
+    @SentinelResource(value = "POST:/api/orders")
     public ResponseEntity<OrderDTO> createOrder(@RequestBody CreateOrderRequest request) {
         logRequest("创建订单", request.getUserId(), request.getSkuId(), request.getQuantity());
         OrderDTO order = orderService.createOrder(request);

@@ -34,10 +34,11 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   
-  data:
-    redis:
-      host: localhost
-      port: 6379
+  # Disable Redis auto-configuration for tests (we use mocks)
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
 
 # Disable OpenTelemetry for tests
 otel:

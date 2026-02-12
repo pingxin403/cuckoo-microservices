@@ -5,6 +5,7 @@ import com.pingxin403.cuckoo.common.idempotency.ProcessedEventRepository;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -31,6 +32,7 @@ public class TestConfig {
     }
 
     @Bean
+    @SuppressWarnings("unchecked")
     public StringRedisTemplate stringRedisTemplate() {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> valueOps = mock(ValueOperations.class);
@@ -41,5 +43,19 @@ public class TestConfig {
         when(valueOps.get(anyString())).thenReturn(null);
         
         return template;
+    }
+
+    @Bean
+    @Primary
+    @SuppressWarnings("unchecked")
+    public RedisTemplate<String, Object> redisTemplate() {
+        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+        ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+        
+        // Mock RedisTemplate behavior to avoid actual Redis connection
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null); // Always cache miss
+        
+        return redisTemplate;
     }
 }

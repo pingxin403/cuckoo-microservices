@@ -14,12 +14,14 @@ import com.pingxin403.cuckoo.inventory.repository.InventoryLogRepository;
 import com.pingxin403.cuckoo.inventory.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 库存服务
@@ -35,9 +37,12 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryLogRepository inventoryLogRepository;
     private final StringRedisTemplate stringRedisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final InventoryConfig inventoryConfig;
 
     private static final String LOCK_KEY_PREFIX = "inventory:lock:";
+    private static final String CACHE_KEY_PREFIX = "inventory:";
+    private static final long CACHE_TTL_MINUTES = 10;
 
     /**
      * 初始化库存
@@ -97,6 +102,9 @@ public class InventoryService {
         inventory.setReservedStock(inventory.getReservedStock() + request.getQuantity());
         inventoryRepository.save(inventory);
 
+        // 删除缓存
+        invalidateCache(request.getSkuId());
+
         // 记录操作流水
         saveLog(request.getSkuId(), request.getOrderId(), "RESERVE", request.getQuantity());
 
@@ -138,6 +146,9 @@ public class InventoryService {
         inventory.setReservedStock(inventory.getReservedStock() - request.getQuantity());
         inventory.setTotalStock(inventory.getTotalStock() - request.getQuantity());
         inventoryRepository.save(inventory);
+
+        // 删除缓存
+        invalidateCache(request.getSkuId());
 
         // 记录操作流水
         saveLog(request.getSkuId(), request.getOrderId(), "DEDUCT", request.getQuantity());
@@ -181,6 +192,9 @@ public class InventoryService {
         inventory.setAvailableStock(inventory.getAvailableStock() + request.getQuantity());
         inventoryRepository.save(inventory);
 
+        // 删除缓存
+        invalidateCache(request.getSkuId());
+
         // 记录操作流水
         saveLog(request.getSkuId(), request.getOrderId(), "RELEASE", request.getQuantity());
 
@@ -190,12 +204,44 @@ public class InventoryService {
 
     /**
      * 根据 SKU ID 查询库存
+     * 实现 Cache-Aside Pattern：
+     * 1. 先查询缓存
+     * 2. 缓存命中则直接返回
+     * 3. 缓存未命中则查询数据库
+     * 4. 将查询结果写入缓存（TTL 10分钟）
      */
     @Transactional(readOnly = true)
     public InventoryDTO getInventoryBySkuId(Long skuId) {
+        String cacheKey = CACHE_KEY_PREFIX + skuId;
+        
+        // 1. 先查询缓存
+        InventoryDTO cachedInventory = (InventoryDTO) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedInventory != null) {
+            log.debug("Cache hit for inventory: skuId={}", skuId);
+            return cachedInventory;
+        }
+        
+        // 2. 缓存未命中，查询数据库
+        log.debug("Cache miss for inventory: skuId={}, querying database", skuId);
         Inventory inventory = inventoryRepository.findBySkuId(skuId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory", skuId));
-        return toDTO(inventory);
+        
+        InventoryDTO inventoryDTO = toDTO(inventory);
+        
+        // 3. 将查询结果写入缓存，设置 TTL 为 10 分钟
+        redisTemplate.opsForValue().set(cacheKey, inventoryDTO, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        log.debug("Inventory cached: skuId={}, ttl={}min", skuId, CACHE_TTL_MINUTES);
+        
+        return inventoryDTO;
+    }
+
+    /**
+     * 删除库存缓存
+     */
+    private void invalidateCache(Long skuId) {
+        String cacheKey = CACHE_KEY_PREFIX + skuId;
+        redisTemplate.delete(cacheKey);
+        log.debug("Inventory cache deleted: skuId={}", skuId);
     }
 
     /**

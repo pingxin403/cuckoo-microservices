@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    
+    - name: Build with Maven
+      run: mvn clean install -DskipTests
+    
+    - name: Run unit tests
+      run: mvn test
+    
+    - name: Run property-based tests
+      run: mvn test -Dtest="**/*PropertyTest"
+    
+    - name: Generate test report
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Test Results
+        path: '**/target/surefire-reports/*.xml'
+        reporter: java-junit
+    
+    - name: Build Docker images
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker build -t cuckoo-user:latest -f cuckoo-user/Dockerfile .
+        docker build -t cuckoo-product:latest -f cuckoo-product/Dockerfile .
+        docker build -t cuckoo-inventory:latest -f cuckoo-inventory/Dockerfile .
+        docker build -t cuckoo-order:latest -f cuckoo-order/Dockerfile .
+        docker build -t cuckoo-payment:latest -f cuckoo-payment/Dockerfile .
+        docker build -t cuckoo-notification:latest -f cuckoo-notification/Dockerfile .
+        docker build -t cuckoo-gateway:latest -f cuckoo-gateway/Dockerfile .
+    
+    - name: Push to Docker Hub
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        docker tag cuckoo-user:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-user:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-user:latest
+        docker tag cuckoo-product:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-product:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-product:latest
+        docker tag cuckoo-inventory:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-inventory:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-inventory:latest
+        docker tag cuckoo-order:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-order:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-order:latest
+        docker tag cuckoo-payment:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-payment:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-payment:latest
+        docker tag cuckoo-notification:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-notification:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-notification:latest
+        docker tag cuckoo-gateway:latest ${{ secrets.DOCKER_USERNAME }}/cuckoo-gateway:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/cuckoo-gateway:latest

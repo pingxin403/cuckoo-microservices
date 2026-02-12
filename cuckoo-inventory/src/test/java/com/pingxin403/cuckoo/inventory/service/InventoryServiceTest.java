@@ -26,15 +26,18 @@ import org.springframework.data.redis.core.ValueOperations;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 /**
  * InventoryService 单元测试
  */
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class InventoryServiceTest {
 
     @Mock
@@ -47,12 +50,17 @@ class InventoryServiceTest {
     private StringRedisTemplate stringRedisTemplate;
 
     @Mock
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
+    @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private org.springframework.data.redis.core.ValueOperations<String, Object> redisValueOperations;
 
     @Mock
     private InventoryConfig inventoryConfig;
 
-    @InjectMocks
     private InventoryService inventoryService;
 
     private Inventory testInventory;
@@ -68,6 +76,18 @@ class InventoryServiceTest {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        
+        // Mock RedisTemplate behavior - set up lenient stubbing for all tests
+        lenient().when(redisTemplate.opsForValue()).thenReturn(redisValueOperations);
+        
+        // Manually create the service with mocked dependencies
+        inventoryService = new InventoryService(
+            inventoryRepository,
+            inventoryLogRepository,
+            stringRedisTemplate,
+            redisTemplate,
+            inventoryConfig
+        );
     }
 
     // ========== InitInventory Tests ==========
@@ -323,6 +343,9 @@ class InventoryServiceTest {
     @Test
     @DisplayName("getInventoryBySkuId - should return InventoryDTO when inventory exists")
     void getInventoryBySkuId_success() {
+        // Explicitly set up the mock for this test
+        when(redisTemplate.opsForValue()).thenReturn(redisValueOperations);
+        when(redisValueOperations.get("inventory:100")).thenReturn(null); // Cache miss
         when(inventoryRepository.findBySkuId(100L)).thenReturn(Optional.of(testInventory));
 
         InventoryDTO result = inventoryService.getInventoryBySkuId(100L);
@@ -332,11 +355,17 @@ class InventoryServiceTest {
         assertThat(result.getTotalStock()).isEqualTo(100);
         assertThat(result.getAvailableStock()).isEqualTo(80);
         assertThat(result.getReservedStock()).isEqualTo(20);
+        
+        verify(redisTemplate, atLeastOnce()).opsForValue(); // Called at least once
+        verify(redisValueOperations).set(eq("inventory:100"), any(InventoryDTO.class), eq(10L), eq(TimeUnit.MINUTES));
     }
 
     @Test
     @DisplayName("getInventoryBySkuId - should throw ResourceNotFoundException when inventory not found")
     void getInventoryBySkuId_notFound() {
+        // Explicitly set up the mock for this test
+        when(redisTemplate.opsForValue()).thenReturn(redisValueOperations);
+        when(redisValueOperations.get("inventory:999")).thenReturn(null); // Cache miss
         when(inventoryRepository.findBySkuId(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> inventoryService.getInventoryBySkuId(999L))
