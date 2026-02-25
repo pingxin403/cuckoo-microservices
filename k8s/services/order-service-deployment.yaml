@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: default
+  labels:
+    app: order-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # 确保至少 2 个 Pod 可用
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: v1
+    spec:
+      containers:
+      - name: order-service
+        image: order-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        
+        # 存活探针：检查服务是否存活
+        # 如果连续 3 次失败，Kubernetes 会重启 Pod
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30  # 启动后 30 秒开始检查
+          periodSeconds: 10        # 每 10 秒检查一次
+          timeoutSeconds: 3        # 超时时间 3 秒
+          successThreshold: 1      # 成功 1 次即认为健康
+          failureThreshold: 3      # 失败 3 次后重启
+        
+        # 就绪探针：检查服务是否就绪
+        # 如果失败，Kubernetes 不会将流量路由到此 Pod
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 20  # 启动后 20 秒开始检查
+          periodSeconds: 5         # 每 5 秒检查一次
+          timeoutSeconds: 3        # 超时时间 3 秒
+          successThreshold: 1      # 成功 1 次即认为就绪
+          failureThreshold: 3      # 失败 3 次后标记为未就绪
+        
+        # 优雅下线钩子
+        lifecycle:
+          preStop:
+            exec:
+              # 等待 30 秒让负载均衡器更新
+              command: ["/bin/sh", "-c", "sleep 30"]
+      
+      # 优雅终止期限：90 秒（30秒 preStop + 60秒应用关闭）
+      terminationGracePeriodSeconds: 90
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: default
+  labels:
+    app: order-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: order-service

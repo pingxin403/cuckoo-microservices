@@ -9,7 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,11 +29,11 @@ class EventPublisherTest {
     @Mock
     private KafkaTemplate<String, DomainEvent> kafkaTemplate;
 
-    private EventPublisher eventPublisher;
+    private KafkaEventPublisher eventPublisher;
 
     @BeforeEach
     void setUp() {
-        eventPublisher = new EventPublisher(kafkaTemplate);
+        eventPublisher = new KafkaEventPublisher(kafkaTemplate);
     }
 
     @Test
@@ -42,13 +41,15 @@ class EventPublisherTest {
         // Given: 创建一个没有 eventId 的事件
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventType("ORDER_CREATED");
-        event.setTimestamp(Instant.now());
-        event.setVersion("1.0");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
         // When: 发布事件
         eventPublisher.publish("order-events", "order-1", event);
@@ -68,19 +69,21 @@ class EventPublisherTest {
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventId("test-event-id");
         event.setEventType("ORDER_CREATED");
-        event.setVersion("1.0");
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
-        Instant before = Instant.now();
+        long before = System.currentTimeMillis();
 
         // When: 发布事件
         eventPublisher.publish("order-events", "order-1", event);
 
-        Instant after = Instant.now();
+        long after = System.currentTimeMillis();
 
         // Then: timestamp 应该被自动设置为当前时间
         assertThat(event.getTimestamp()).isNotNull();
@@ -97,13 +100,15 @@ class EventPublisherTest {
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventId(existingEventId);
         event.setEventType("ORDER_CREATED");
-        event.setTimestamp(Instant.now());
-        event.setVersion("1.0");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
         // When: 发布事件
         eventPublisher.publish("order-events", "order-1", event);
@@ -118,17 +123,19 @@ class EventPublisherTest {
     @Test
     void publish_withKey_shouldNotOverrideExistingTimestamp() {
         // Given: 创建一个已有 timestamp 的事件
-        Instant existingTimestamp = Instant.parse("2024-01-01T00:00:00Z");
+        long existingTimestamp = 1704067200000L; // 2024-01-01T00:00:00Z
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventId("test-event-id");
         event.setEventType("ORDER_CREATED");
         event.setTimestamp(existingTimestamp);
-        event.setVersion("1.0");
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
         // When: 发布事件
         eventPublisher.publish("order-events", "order-1", event);
@@ -144,6 +151,8 @@ class EventPublisherTest {
     void publish_withoutKey_shouldUseEventIdAsKey() {
         // Given: 创建一个事件
         OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 2, BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
         // When: 发布事件（不指定 key）
         eventPublisher.publish("order-events", event);
@@ -159,13 +168,15 @@ class EventPublisherTest {
         // Given: 创建一个没有 eventId 的事件
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventType("ORDER_CREATED");
-        event.setTimestamp(Instant.now());
-        event.setVersion("1.0");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
         // When: 发布事件（不指定 key）
         eventPublisher.publish("order-events", event);
@@ -183,7 +194,7 @@ class EventPublisherTest {
     void publish_shouldHandleKafkaException() {
         // Given: KafkaTemplate 抛出异常
         OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 2, BigDecimal.valueOf(100));
-        doThrow(new RuntimeException("Kafka error")).when(kafkaTemplate).send(any(), any(), any());
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new RuntimeException("Kafka error")));
 
         // When: 发布事件
         // Then: 不应该抛出异常（异常被捕获并记录日志）
@@ -198,19 +209,21 @@ class EventPublisherTest {
         // Given: 创建一个没有 eventId 和 timestamp 的事件
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventType("ORDER_CREATED");
-        event.setVersion("1.0");
+        event.setVersion(1);
         event.setOrderId(1L);
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
         event.setTotalAmount(BigDecimal.valueOf(100));
+        
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
-        Instant before = Instant.now();
+        long before = System.currentTimeMillis();
 
         // When: 发布事件
         eventPublisher.publish("order-events", "order-1", event);
 
-        Instant after = Instant.now();
+        long after = System.currentTimeMillis();
 
         // Then: eventId 和 timestamp 都应该被自动设置
         assertThat(event.getEventId()).isNotNull();

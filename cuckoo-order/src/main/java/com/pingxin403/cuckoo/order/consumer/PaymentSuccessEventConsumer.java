@@ -22,7 +22,11 @@ public class PaymentSuccessEventConsumer extends AbstractEventConsumer<PaymentSu
     /**
      * 监听 payment-events 主题
      */
-    @KafkaListener(topics = "payment-events", groupId = "order-service-group")
+    @KafkaListener(
+        topics = "payment-events", 
+        groupId = "order-service-group",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
     public void onPaymentSuccess(PaymentSuccessEvent event) {
         log.info("收到 PaymentSuccessEvent: eventId={}, orderId={}, paymentId={}",
                 event.getEventId(), event.getOrderId(), event.getPaymentId());

@@ -22,14 +22,45 @@
     <!-- 控制台输出 - 普通文本格式（开发环境使用） -->
     <appender name="CONSOLE_TEXT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId:-}] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [traceId=%X{traceId:-} spanId=%X{spanId:-}] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- 生产环境 profile：使用 JSON 格式输出 -->
+    <!-- Logstash TCP 输出 - 异步发送到 ELK Stack -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>logstash.logging.svc.cluster.local:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <customFields>{"service":"${APP_NAME}"}</customFields>
+            <timeZone>UTC</timeZone>
+        </encoder>
+        <!-- 连接超时 -->
+        <connectionTimeout>5000</connectionTimeout>
+        <!-- 写入超时 -->
+        <writeTimeout>5000</writeTimeout>
+        <!-- 重连延迟 -->
+        <reconnectionDelay>10000</reconnectionDelay>
+        <!-- 队列大小（异步发送，避免阻塞业务） -->
+        <queueSize>512</queueSize>
+    </appender>
+
+    <!-- 异步 Logstash appender（避免阻塞业务线程） -->
+    <appender name="ASYNC_LOGSTASH" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="LOGSTASH"/>
+        <!-- 队列满时不阻塞，丢弃日志 -->
+        <neverBlock>true</neverBlock>
+        <!-- 队列大小 -->
+        <queueSize>512</queueSize>
+        <!-- 队列剩余容量小于此值时丢弃 TRACE, DEBUG, INFO 日志 -->
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <!-- 生产环境 profile：使用 JSON 格式输出 + Logstash -->
     <springProfile name="prod,production">
         <root level="INFO">
             <appender-ref ref="CONSOLE_JSON"/>
+            <appender-ref ref="ASYNC_LOGSTASH"/>
         </root>
     </springProfile>
 

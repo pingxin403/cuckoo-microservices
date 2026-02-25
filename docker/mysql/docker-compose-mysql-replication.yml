@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  mysql-master:
+    image: mysql:8.0
+    container_name: cuckoo-mysql-master
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-master-data:/var/lib/mysql
+      - ../init:/docker-entrypoint-initdb.d
+      - ./master/my.cnf:/etc/mysql/conf.d/my.cnf
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - mysql-net
+
+  mysql-slave1:
+    image: mysql:8.0
+    container_name: cuckoo-mysql-slave1
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-slave1-data:/var/lib/mysql
+      - ../init:/docker-entrypoint-initdb.d
+      - ./slave1/my.cnf:/etc/mysql/conf.d/my.cnf
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - mysql-net
+
+  mysql-slave2:
+    image: mysql:8.0
+    container_name: cuckoo-mysql-slave2
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-slave2-data:/var/lib/mysql
+      - ../init:/docker-entrypoint-initdb.d
+      - ./slave2/my.cnf:/etc/mysql/conf.d/my.cnf
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - mysql-net
+
+  # 初始化复制的一次性容器
+  mysql-replication-init:
+    image: mysql:8.0
+    container_name: mysql-replication-init
+    volumes:
+      - ./init-replication.sh:/init-replication.sh
+    command: bash /init-replication.sh
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave1:
+        condition: service_healthy
+      mysql-slave2:
+        condition: service_healthy
+    networks:
+      - mysql-net
+
+volumes:
+  mysql-master-data:
+  mysql-slave1-data:
+  mysql-slave2-data:
+
+networks:
+  mysql-net:
+    driver: bridge

@@ -2,13 +2,18 @@ package com.pingxin403.cuckoo.order.service;
 
 import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.event.OrderCancelledEvent;
+import com.pingxin403.cuckoo.common.event.OrderCreatedEvent;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.order.client.InventoryClient;
 import com.pingxin403.cuckoo.order.client.PaymentClient;
 import com.pingxin403.cuckoo.order.client.ProductClient;
 import com.pingxin403.cuckoo.order.dto.*;
 import com.pingxin403.cuckoo.order.entity.Order;
 import com.pingxin403.cuckoo.order.repository.OrderRepository;
+import com.pingxin403.cuckoo.order.saga.OrderSagaDefinition;
+import com.pingxin403.cuckoo.order.saga.SagaDefinition;
+import com.pingxin403.cuckoo.order.saga.SagaOrchestrator;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,6 +41,9 @@ public class OrderService {
     private final InventoryClient inventoryClient;
     private final PaymentClient paymentClient;
     private final EventPublisher eventPublisher;
+    private final LocalMessageService localMessageService;
+    private final SagaOrchestrator sagaOrchestrator;
+    private final OrderSagaDefinition orderSagaDefinition;
 
     /**
      * 创建订单（Seata 全局事务）
@@ -94,7 +104,53 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("创建支付单成功: paymentId={}, orderId={}", payment.getId(), order.getId());
 
+        // 5. 在同一事务中保存 OrderCreatedEvent 到本地消息表
+        OrderCreatedEvent event = OrderCreatedEvent.create(
+                String.valueOf(order.getId()),  // Convert Long to String
+                order.getUserId(),
+                order.getSkuId(),
+                order.getQuantity(),
+                order.getTotalAmount()
+        );
+        localMessageService.saveMessage(event);
+        log.info("订单创建事件已保存到本地消息表: eventId={}, orderId={}", event.getEventId(), order.getId());
+
+        // 6. 异步发布事件到 Kafka（失败不影响事务提交）
+        try {
+            eventPublisher.publish("order-events", order.getId().toString(), event);
+            localMessageService.markAsSent(event.getEventId());
+            log.info("订单创建事件已发布到 Kafka: eventId={}", event.getEventId());
+        } catch (Exception e) {
+            log.error("发布订单创建事件失败，将由定时任务重试: eventId={}", event.getEventId(), e);
+            // 消息保持 PENDING 状态，等待定时任务重试
+        }
+
         return OrderDTO.fromEntity(order);
+    }
+    
+    /**
+     * 创建订单（使用 Saga 模式）
+     * 1. 创建订单
+     * 2. 预留库存
+     * 3. 处理支付
+     * 4. 发送通知
+     */
+    public String createOrderWithSaga(CreateOrderRequest request) {
+        log.info("开始创建订单（Saga 模式）: userId={}, skuId={}, quantity={}",
+                request.getUserId(), request.getSkuId(), request.getQuantity());
+        
+        // 准备 Saga 上下文
+        Map<String, Object> initialContext = new HashMap<>();
+        initialContext.put("orderRequest", request);
+        
+        // 创建 Saga 定义
+        SagaDefinition sagaDefinition = orderSagaDefinition.createOrderSaga();
+        
+        // 启动 Saga
+        String sagaId = sagaOrchestrator.startSaga(sagaDefinition, initialContext);
+        log.info("订单 Saga 已启动: sagaId={}", sagaId);
+        
+        return sagaId;
     }
 
     /**
@@ -140,7 +196,7 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("订单状态已更新为已取消: orderId={}", id);
 
-        // 发布 OrderCancelledEvent
+        // 在同一事务中保存 OrderCancelledEvent 到本地消息表
         OrderCancelledEvent event = OrderCancelledEvent.create(
                 order.getId(),
                 order.getUserId(),
@@ -148,7 +204,18 @@ public class OrderService {
                 order.getQuantity(),
                 "用户主动取消"
         );
-        eventPublisher.publish("order-events", order.getId().toString(), event);
+        localMessageService.saveMessage(event);
+        log.info("订单取消事件已保存到本地消息表: eventId={}, orderId={}", event.getEventId(), order.getId());
+
+        // 异步发布事件到 Kafka（失败不影响事务提交）
+        try {
+            eventPublisher.publish("order-events", order.getId().toString(), event);
+            localMessageService.markAsSent(event.getEventId());
+            log.info("订单取消事件已发布到 Kafka: eventId={}", event.getEventId());
+        } catch (Exception e) {
+            log.error("发布订单取消事件失败，将由定时任务重试: eventId={}", event.getEventId(), e);
+            // 消息保持 PENDING 状态，等待定时任务重试
+        }
 
         return OrderDTO.fromEntity(order);
     }
@@ -187,7 +254,7 @@ public class OrderService {
         order.setCancelReason("支付超时");
         orderRepository.save(order);
 
-        // 发布 OrderCancelledEvent
+        // 在同一事务中保存 OrderCancelledEvent 到本地消息表
         OrderCancelledEvent event = OrderCancelledEvent.create(
                 order.getId(),
                 order.getUserId(),
@@ -195,7 +262,18 @@ public class OrderService {
                 order.getQuantity(),
                 "支付超时"
         );
-        eventPublisher.publish("order-events", order.getId().toString(), event);
+        localMessageService.saveMessage(event);
+        log.info("订单超时取消事件已保存到本地消息表: eventId={}, orderId={}", event.getEventId(), order.getId());
+
+        // 异步发布事件到 Kafka（失败不影响事务提交）
+        try {
+            eventPublisher.publish("order-events", order.getId().toString(), event);
+            localMessageService.markAsSent(event.getEventId());
+            log.info("订单超时取消事件已发布到 Kafka: eventId={}", event.getEventId());
+        } catch (Exception e) {
+            log.error("发布订单超时取消事件失败，将由定时任务重试: eventId={}", event.getEventId(), e);
+            // 消息保持 PENDING 状态，等待定时任务重试
+        }
     }
 
     /**

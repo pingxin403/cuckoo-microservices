@@ -1,0 +1,32 @@
+# 开发环境配置
+# 此文件包含开发环境特定的配置，会覆盖 application-common.yml 中的默认配置
+
+# Actuator 配置 - 开发环境
+management:
+  tracing:
+    sampling:
+      probability: 1.0  # 开发环境 100% 采样率
+
+# OpenTelemetry 配置 - 开发环境
+otel:
+  exporter:
+    otlp:
+      # 开发环境使用 localhost
+      endpoint: http://localhost:4318
+  resource:
+    attributes:
+      deployment.environment: development
+
+# JPA 配置 - 开发环境
+spring:
+  jpa:
+    show-sql: true  # 开发环境显示 SQL
+    properties:
+      hibernate:
+        format_sql: true
+
+# 日志配置 - 开发环境
+logging:
+  level:
+    root: INFO
+    com.pingxin403.cuckoo: DEBUG

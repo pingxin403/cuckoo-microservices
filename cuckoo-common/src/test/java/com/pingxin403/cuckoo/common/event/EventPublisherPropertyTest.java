@@ -24,7 +24,8 @@ class EventPublisherPropertyTest {
     private EventPublisher createEventPublisher() {
         @SuppressWarnings("unchecked")
         KafkaTemplate<String, DomainEvent> kafkaTemplate = mock(KafkaTemplate.class);
-        return new EventPublisher(kafkaTemplate);
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        return new KafkaEventPublisher(kafkaTemplate);
     }
 
     /**
@@ -62,10 +63,12 @@ class EventPublisherPropertyTest {
             .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
         
         // 验证 timestamp 已被自动填充且在合理的时间范围内
+        long beforeMillis = beforePublish.toEpochMilli();
+        long afterMillis = afterPublish.toEpochMilli();
         assertThat(event.getTimestamp())
             .isNotNull()
-            .isAfterOrEqualTo(beforePublish.minusSeconds(1))
-            .isBeforeOrEqualTo(afterPublish.plusSeconds(1));
+            .isGreaterThanOrEqualTo(beforeMillis - 1000)
+            .isLessThanOrEqualTo(afterMillis + 1000);
     }
 
     /**
@@ -85,7 +88,7 @@ class EventPublisherPropertyTest {
         
         // 设置自定义的 eventId 和 timestamp
         String customEventId = UUID.randomUUID().toString();
-        Instant customTimestamp = Instant.now().minusSeconds(3600);
+        long customTimestamp = System.currentTimeMillis() - 3600000;
         event.setEventId(customEventId);
         event.setTimestamp(customTimestamp);
         
@@ -111,7 +114,8 @@ class EventPublisherPropertyTest {
         
         @SuppressWarnings("unchecked")
         KafkaTemplate<String, DomainEvent> kafkaTemplate = mock(KafkaTemplate.class);
-        EventPublisher eventPublisher = new EventPublisher(kafkaTemplate);
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        KafkaEventPublisher eventPublisher = new KafkaEventPublisher(kafkaTemplate);
         
         // 清空 eventId 和 timestamp
         event.setEventId(null);
@@ -235,8 +239,9 @@ class EventPublisherPropertyTest {
         KafkaTemplate<String, DomainEvent> kafkaTemplate = mock(KafkaTemplate.class);
         when(kafkaTemplate.send(any(), any(), any()))
             .thenThrow(new RuntimeException("Kafka connection failed"));
+        when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new RuntimeException("Kafka connection failed")));
         
-        EventPublisher eventPublisher = new EventPublisher(kafkaTemplate);
+        KafkaEventPublisher eventPublisher = new KafkaEventPublisher(kafkaTemplate);
         
         // 创建一个 ListAppender 来捕获日志
         ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) 
@@ -288,7 +293,7 @@ class EventPublisherPropertyTest {
         public TestDomainEvent(String data) {
             this.data = data;
             setEventType("TEST_EVENT");
-            setVersion("1.0");
+            setVersion(1);
         }
 
         public String getData() {

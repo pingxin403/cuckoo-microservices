@@ -12,19 +12,29 @@ management:
       show-details: always
   tracing:
     sampling:
-      probability: 1.0
+      probability: 1.0  # 默认 100% 采样，生产环境通过 profile 覆盖
+  otlp:
+    tracing:
+      endpoint: http://jaeger-collector.observability.svc.cluster.local:4318/v1/traces
 
 # OpenTelemetry 配置
 otel:
   exporter:
     otlp:
-      endpoint: http://localhost:4317
+      # OTLP HTTP endpoint for Jaeger Collector
+      endpoint: http://jaeger-collector.observability.svc.cluster.local:4318
+      # 使用 HTTP 协议而不是 gRPC
+      protocol: http/protobuf
   traces:
     exporter: otlp
   metrics:
     exporter: none
   logs:
     exporter: none
+  resource:
+    attributes:
+      # 服务名称将由各服务的 application.yml 覆盖
+      deployment.environment: ${DEPLOYMENT_ENV:development}
 
 # JPA 公共配置
 spring:
@@ -35,6 +45,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  
+  # 优雅关闭配置
+  lifecycle:
+    timeout-per-shutdown-phase: 60s  # 每个关闭阶段的超时时间
 
   # Redis 公共配置
   data:
@@ -74,3 +88,13 @@ spring:
 feign:
   sentinel:
     enabled: true
+
+# 服务器公共配置
+server:
+  shutdown: graceful  # 启用优雅关闭
+
+# 优雅下线配置
+graceful:
+  shutdown:
+    grace-period: 30  # 等待负载均衡器更新的时间（秒）
+    max-wait: 60      # 等待现有请求完成的最大时间（秒）

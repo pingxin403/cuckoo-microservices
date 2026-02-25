@@ -37,3 +37,17 @@ server:
 otel:
   service:
     name: ${spring.application.name}
+
+# Redisson 配置
+spring.redis:
+  redisson:
+    config: |
+      singleServerConfig:
+        address: "redis://localhost:6379"
+        connectionPoolSize: 64
+        connectionMinimumIdleSize: 10
+        idleConnectionTimeout: 10000
+        connectTimeout: 10000
+        timeout: 3000
+        retryAttempts: 3
+        retryInterval: 1500

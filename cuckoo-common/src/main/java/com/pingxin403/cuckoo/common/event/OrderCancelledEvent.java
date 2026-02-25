@@ -22,7 +22,7 @@ public class OrderCancelledEvent extends DomainEvent {
     private Integer quantity;
     private String reason;
 
-    public OrderCancelledEvent(Long orderId, Long userId, Long skuId, Integer quantity, String reason, String version) {
+    public OrderCancelledEvent(Long orderId, Long userId, Long skuId, Integer quantity, String reason, Integer version) {
         init("ORDER_CANCELLED", version);
         this.orderId = orderId;
         this.userId = userId;
@@ -32,9 +32,9 @@ public class OrderCancelledEvent extends DomainEvent {
     }
 
     /**
-     * 使用默认版本号 "1.0" 创建事件
+     * 使用默认版本号 1 创建事件
      */
     public static OrderCancelledEvent create(Long orderId, Long userId, Long skuId, Integer quantity, String reason) {
-        return new OrderCancelledEvent(orderId, userId, skuId, quantity, reason, "1.0");
+        return new OrderCancelledEvent(orderId, userId, skuId, quantity, reason, 1);
     }
 }

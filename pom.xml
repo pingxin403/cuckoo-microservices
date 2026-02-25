@@ -50,6 +50,9 @@
 
         <!-- Logging -->
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+        
+        <!-- Redisson -->
+        <redisson.version>3.27.2</redisson.version>
     </properties>
 
     <dependencyManagement>
@@ -166,6 +169,13 @@
                 <artifactId>jqwik</artifactId>
                 <version>${jqwik.version}</version>
                 <scope>test</scope>
+            </dependency>
+            
+            <!-- Redisson -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alert-rules.yml: |
+    groups:
+      - name: microservice_alerts
+        interval: 30s
+        rules:
+          # 错误率告警（> 1%）
+          - alert: HighErrorRate
+            expr: |
+              (
+                sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (application)
+                /
+                sum(rate(http_server_requests_seconds_count[5m])) by (application)
+              ) * 100 > 1
+            for: 2m
+            labels:
+              severity: warning
+              category: availability
+            annotations:
+              summary: "服务 {{ $labels.application }} 错误率过高"
+              description: "服务 {{ $labels.application }} 的错误率为 {{ $value | humanizePercentage }}，超过 1% 阈值"
+
+          # 响应时间告警（P99 > 1s）
+          - alert: HighResponseTime
+            expr: |
+              histogram_quantile(0.99,
+                sum(rate(http_server_requests_seconds_bucket[5m])) by (application, le)
+              ) > 1
+            for: 5m
+            labels:
+              severity: warning
+              category: performance
+            annotations:
+              summary: "服务 {{ $labels.application }} 响应时间过长"
+              description: "服务 {{ $labels.application }} 的 P99 响应时间为 {{ $value | humanizeDuration }}，超过 1 秒阈值"
+
+          # 服务不可用告警
+          - alert: ServiceDown
+            expr: up{job=~".*-service"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              category: availability
+            annotations:
+              summary: "服务 {{ $labels.job }} 不可用"
+              description: "服务 {{ $labels.job }} 已经下线超过 1 分钟"
+
+          # JVM 内存使用告警（> 80%）
+          - alert: HighJVMMemoryUsage
+            expr: |
+              (
+                sum(jvm_memory_used_bytes{area="heap"}) by (application)
+                /
+                sum(jvm_memory_max_bytes{area="heap"}) by (application)
+              ) * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+              category: resource
+            annotations:
+              summary: "服务 {{ $labels.application }} JVM 内存使用率过高"
+              description: "服务 {{ $labels.application }} 的 JVM 堆内存使用率为 {{ $value | humanizePercentage }}，超过 80% 阈值"
+
+          # Kafka 消费延迟告警（> 1 分钟）
+          - alert: KafkaConsumerLag
+            expr: |
+              kafka_consumer_lag_seconds > 60
+            for: 2m
+            labels:
+              severity: warning
+              category: messaging
+            annotations:
+              summary: "Kafka 消费者 {{ $labels.consumer_group }} 延迟过高"
+              description: "消费者组 {{ $labels.consumer_group }} 在主题 {{ $labels.topic }} 上的延迟为 {{ $value | humanizeDuration }}，超过 1 分钟"
+
+          # CPU 使用率告警（> 80%）
+          - alert: HighCPUUsage
+            expr: |
+              (
+                sum(rate(process_cpu_seconds_total[5m])) by (application)
+                /
+                sum(system_cpu_count) by (application)
+              ) * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+              category: resource
+            annotations:
+              summary: "服务 {{ $labels.application }} CPU 使用率过高"
+              description: "服务 {{ $labels.application }} 的 CPU 使用率为 {{ $value | humanizePercentage }}，超过 80% 阈值"
+
+          # 数据库连接池告警（> 80%）
+          - alert: HighDatabaseConnectionPoolUsage
+            expr: |
+              (
+                hikaricp_connections_active
+                /
+                hikaricp_connections_max
+              ) * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+              category: resource
+            annotations:
+              summary: "服务 {{ $labels.application }} 数据库连接池使用率过高"
+              description: "服务 {{ $labels.application }} 的数据库连接池使用率为 {{ $value | humanizePercentage }}，超过 80% 阈值"
+
+          # GC 时间占比告警（> 10%）
+          - alert: HighGCTime
+            expr: |
+              (
+                rate(jvm_gc_pause_seconds_sum[5m])
+                /
+                rate(jvm_gc_pause_seconds_count[5m])
+              ) * 100 > 10
+            for: 5m
+            labels:
+              severity: warning
+              category: performance
+            annotations:
+              summary: "服务 {{ $labels.application }} GC 时间占比过高"
+              description: "服务 {{ $labels.application }} 的 GC 时间占比为 {{ $value | humanizePercentage }}，超过 10% 阈值"
+
+          # Pod 重启告警
+          - alert: PodRestarting
+            expr: |
+              rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+              category: stability
+            annotations:
+              summary: "Pod {{ $labels.pod }} 频繁重启"
+              description: "Pod {{ $labels.pod }} 在过去 15 分钟内重启了 {{ $value }} 次"
+
+          # 磁盘空间告警（> 85%）
+          - alert: HighDiskUsage
+            expr: |
+              (
+                node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}
+              ) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              category: resource
+            annotations:
+              summary: "节点 {{ $labels.instance }} 磁盘使用率过高"
+              description: "节点 {{ $labels.instance }} 的磁盘使用率为 {{ $value | humanizePercentage }}，超过 85% 阈值"

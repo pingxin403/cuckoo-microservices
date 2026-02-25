@@ -22,19 +22,21 @@ public class PaymentSuccessEvent extends DomainEvent {
     private Long paymentId;
     private Long userId;
     private BigDecimal amount;
+    private String paymentMethod;
 
-    public PaymentSuccessEvent(Long orderId, Long paymentId, Long userId, BigDecimal amount, String version) {
+    public PaymentSuccessEvent(Long orderId, Long paymentId, Long userId, BigDecimal amount, String paymentMethod, Integer version) {
         init("PAYMENT_SUCCESS", version);
         this.orderId = orderId;
         this.paymentId = paymentId;
         this.userId = userId;
         this.amount = amount;
+        this.paymentMethod = paymentMethod;
     }
 
     /**
-     * 使用默认版本号 "1.0" 创建事件
+     * 使用默认版本号 1 创建事件
      */
-    public static PaymentSuccessEvent create(Long orderId, Long paymentId, Long userId, BigDecimal amount) {
-        return new PaymentSuccessEvent(orderId, paymentId, userId, amount, "1.0");
+    public static PaymentSuccessEvent create(Long orderId, Long paymentId, Long userId, BigDecimal amount, String paymentMethod) {
+        return new PaymentSuccessEvent(orderId, paymentId, userId, amount, paymentMethod, 1);
     }
 }

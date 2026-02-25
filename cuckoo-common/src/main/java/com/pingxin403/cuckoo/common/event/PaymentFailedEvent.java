@@ -21,7 +21,7 @@ public class PaymentFailedEvent extends DomainEvent {
     private Long userId;
     private String reason;
 
-    public PaymentFailedEvent(Long orderId, Long paymentId, Long userId, String reason, String version) {
+    public PaymentFailedEvent(Long orderId, Long paymentId, Long userId, String reason, Integer version) {
         init("PAYMENT_FAILED", version);
         this.orderId = orderId;
         this.paymentId = paymentId;
@@ -30,9 +30,9 @@ public class PaymentFailedEvent extends DomainEvent {
     }
 
     /**
-     * 使用默认版本号 "1.0" 创建事件
+     * 使用默认版本号 1 创建事件
      */
     public static PaymentFailedEvent create(Long orderId, Long paymentId, Long userId, String reason) {
-        return new PaymentFailedEvent(orderId, paymentId, userId, reason, "1.0");
+        return new PaymentFailedEvent(orderId, paymentId, userId, reason, 1);
     }
 }

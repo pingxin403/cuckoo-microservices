@@ -1,9 +1,12 @@
 package com.pingxin403.cuckoo.inventory.service;
 
+import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.InventoryDeductedEvent;
 import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
 import com.pingxin403.cuckoo.common.exception.InsufficientStockException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.inventory.config.InventoryConfig;
 import com.pingxin403.cuckoo.inventory.dto.InitInventoryRequest;
 import com.pingxin403.cuckoo.inventory.dto.InventoryDTO;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -39,9 +43,12 @@ public class InventoryService {
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
     private final InventoryConfig inventoryConfig;
+    private final EventPublisher eventPublisher;
+    private final LocalMessageService localMessageService;
 
     private static final String LOCK_KEY_PREFIX = "inventory:lock:";
     private static final String CACHE_KEY_PREFIX = "inventory:";
+    private static final String INVENTORY_EVENTS_TOPIC = "inventory-events";
     private static final long CACHE_TTL_MINUTES = 10;
 
     /**
@@ -143,6 +150,10 @@ public class InventoryService {
                     request.getSkuId(), request.getQuantity(), inventory.getReservedStock()));
         }
 
+        // 记录扣减前的库存数量
+        Integer beforeReservedStock = inventory.getReservedStock();
+        Integer beforeTotalStock = inventory.getTotalStock();
+
         inventory.setReservedStock(inventory.getReservedStock() - request.getQuantity());
         inventory.setTotalStock(inventory.getTotalStock() - request.getQuantity());
         inventoryRepository.save(inventory);
@@ -155,6 +166,32 @@ public class InventoryService {
 
         log.info("Stock deducted: skuId={}, quantity={}, orderId={}",
                 request.getSkuId(), request.getQuantity(), request.getOrderId());
+
+        // 在同一事务中保存 InventoryDeductedEvent 到本地消息表
+        InventoryDeductedEvent.InventoryChange change = new InventoryDeductedEvent.InventoryChange(
+                request.getSkuId(),
+                request.getQuantity(),
+                beforeTotalStock,
+                inventory.getTotalStock()
+        );
+        
+        InventoryDeductedEvent event = InventoryDeductedEvent.create(
+                Long.parseLong(request.getOrderId()),
+                Collections.singletonList(change)
+        );
+        
+        localMessageService.saveMessage(event);
+        log.info("库存扣减事件已保存到本地消息表: eventId={}, orderId={}", event.getEventId(), request.getOrderId());
+
+        // 异步发布事件到 Kafka（失败不影响事务提交）
+        try {
+            eventPublisher.publish(INVENTORY_EVENTS_TOPIC, request.getOrderId(), event);
+            localMessageService.markAsSent(event.getEventId());
+            log.info("库存扣减事件已发布到 Kafka: eventId={}", event.getEventId());
+        } catch (Exception e) {
+            log.error("发布库存扣减事件失败，将由定时任务重试: eventId={}", event.getEventId(), e);
+            // 消息保持 PENDING 状态，等待定时任务重试
+        }
     }
 
     /**

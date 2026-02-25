@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      # SMTP 配置（邮件通知）
+      smtp_smarthost: 'smtp.example.com:587'
+      smtp_from: 'alertmanager@example.com'
+      smtp_auth_username: 'alertmanager@example.com'
+      smtp_auth_password: 'your-password'
+      smtp_require_tls: true
+
+    # 告警路由配置
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        # 严重告警立即发送
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+          continue: true
+        # 警告级别告警
+        - match:
+            severity: warning
+          receiver: 'warning-alerts'
+
+    # 告警接收器配置
+    receivers:
+      # 默认接收器
+      - name: 'default'
+        webhook_configs:
+          - url: 'http://localhost:5001/webhook'
+            send_resolved: true
+
+      # 严重告警接收器（多渠道通知）
+      - name: 'critical-alerts'
+        # 邮件通知
+        email_configs:
+          - to: 'ops-team@example.com'
+            headers:
+              Subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+            html: |
+              <h2>严重告警</h2>
+              <p><strong>告警名称:</strong> {{ .GroupLabels.alertname }}</p>
+              <p><strong>服务:</strong> {{ .GroupLabels.application }}</p>
+              <p><strong>描述:</strong> {{ range .Alerts }}{{ .Annotations.description }}{{ end }}</p>
+              <p><strong>时间:</strong> {{ .StartsAt }}</p>
+        # 钉钉通知
+        webhook_configs:
+          - url: 'https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_TOKEN'
+            send_resolved: true
+            http_config:
+              headers:
+                Content-Type: 'application/json'
+        # 企业微信通知
+          - url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WECHAT_KEY'
+            send_resolved: true
+            http_config:
+              headers:
+                Content-Type: 'application/json'
+
+      # 警告级别告警接收器
+      - name: 'warning-alerts'
+        # 邮件通知
+        email_configs:
+          - to: 'dev-team@example.com'
+            headers:
+              Subject: '[WARNING] {{ .GroupLabels.alertname }}'
+            html: |
+              <h2>警告告警</h2>
+              <p><strong>告警名称:</strong> {{ .GroupLabels.alertname }}</p>
+              <p><strong>服务:</strong> {{ .GroupLabels.application }}</p>
+              <p><strong>描述:</strong> {{ range .Alerts }}{{ .Annotations.description }}{{ end }}</p>
+              <p><strong>时间:</strong> {{ .StartsAt }}</p>
+        # 钉钉通知
+        webhook_configs:
+          - url: 'https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_TOKEN'
+            send_resolved: true
+
+    # 告警抑制规则
+    inhibit_rules:
+      # 如果服务不可用，抑制其他所有告警
+      - source_match:
+          severity: 'critical'
+          alertname: 'ServiceDown'
+        target_match:
+          severity: 'warning'
+        equal: ['application']
+      # 如果节点不可用，抑制该节点上的所有告警
+      - source_match:
+          alertname: 'NodeDown'
+        target_match_re:
+          alertname: '.*'
+        equal: ['instance']

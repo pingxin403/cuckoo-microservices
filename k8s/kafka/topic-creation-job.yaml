@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topic-creation
+  namespace: kafka
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: kafka-topics
+        image: confluentinc/cp-kafka:7.5.3
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          
+          echo "等待 Kafka 集群就绪..."
+          until kafka-broker-api-versions --bootstrap-server kafka-0.kafka-headless:9093 > /dev/null 2>&1; do
+            echo "Kafka 尚未就绪，等待 5 秒..."
+            sleep 5
+          done
+          
+          echo "Kafka 集群已就绪，开始创建 topics..."
+          
+          # 创建 order-events topic
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 \
+            --create \
+            --if-not-exists \
+            --topic order-events \
+            --partitions 3 \
+            --replication-factor 2 \
+            --config retention.ms=604800000 \
+            --config segment.ms=86400000
+          
+          echo "✓ order-events topic 创建成功"
+          
+          # 创建 payment-events topic
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 \
+            --create \
+            --if-not-exists \
+            --topic payment-events \
+            --partitions 3 \
+            --replication-factor 2 \
+            --config retention.ms=604800000 \
+            --config segment.ms=86400000
+          
+          echo "✓ payment-events topic 创建成功"
+          
+          # 创建 inventory-events topic
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 \
+            --create \
+            --if-not-exists \
+            --topic inventory-events \
+            --partitions 3 \
+            --replication-factor 2 \
+            --config retention.ms=604800000 \
+            --config segment.ms=86400000
+          
+          echo "✓ inventory-events topic 创建成功"
+          
+          # 创建 notification-events topic
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 \
+            --create \
+            --if-not-exists \
+            --topic notification-events \
+            --partitions 3 \
+            --replication-factor 2 \
+            --config retention.ms=604800000 \
+            --config segment.ms=86400000
+          
+          echo "✓ notification-events topic 创建成功"
+          
+          # 创建死信队列 topic
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 \
+            --create \
+            --if-not-exists \
+            --topic dead-letter-queue \
+            --partitions 3 \
+            --replication-factor 2 \
+            --config retention.ms=2592000000
+          
+          echo "✓ dead-letter-queue topic 创建成功"
+          
+          echo ""
+          echo "所有 topics 创建完成！"
+          echo ""
+          echo "验证 topics 列表："
+          kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 --list
+          
+          echo ""
+          echo "验证 topics 详细信息："
+          for topic in order-events payment-events inventory-events notification-events dead-letter-queue; do
+            echo ""
+            echo "=== $topic ==="
+            kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 --describe --topic $topic
+          done

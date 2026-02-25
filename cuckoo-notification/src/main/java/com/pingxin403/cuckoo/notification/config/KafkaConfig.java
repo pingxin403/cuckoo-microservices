@@ -1,7 +1,9 @@
 package com.pingxin403.cuckoo.notification.config;
 
+import com.pingxin403.cuckoo.common.kafka.KafkaConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +11,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
@@ -17,6 +20,8 @@ import java.util.Map;
 
 /**
  * Kafka 配置
+ * 集成通用的错误处理和重试机制
+ * Requirements: 1.6, 1.7
  */
 @EnableKafka
 @Configuration
@@ -27,6 +32,9 @@ public class KafkaConfig {
 
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
+
+    @Autowired
+    private KafkaConsumerConfig kafkaConsumerConfig;
 
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
@@ -45,11 +53,16 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
+            CommonErrorHandler errorHandler) {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        
+        // 应用通用的错误处理器（包含重试和死信队列支持）
+        kafkaConsumerConfig.configureContainerFactory(factory, errorHandler);
+        
         return factory;
     }
 }

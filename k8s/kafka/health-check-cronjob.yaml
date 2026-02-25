@@ -1,0 +1,102 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kafka-health-check
+  namespace: kafka
+spec:
+  schedule: "*/5 * * * *"  # 每 5 分钟执行一次
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: health-check
+            image: confluentinc/cp-kafka:7.5.3
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              
+              echo "=========================================="
+              echo "Kafka 集群健康检查 - $(date)"
+              echo "=========================================="
+              echo ""
+              
+              # 检查所有 broker 是否在线
+              echo "1. 检查 Broker 状态..."
+              BROKERS=$(kafka-broker-api-versions --bootstrap-server kafka-0.kafka-headless:9093 2>&1 | grep -oP 'kafka-\d+' | sort -u | wc -l)
+              echo "   在线 Brokers 数量: $BROKERS"
+              
+              if [ "$BROKERS" -ne 3 ]; then
+                echo "   ❌ 错误: 期望 3 个 brokers，实际只有 $BROKERS 个在线"
+                exit 1
+              else
+                echo "   ✓ 所有 3 个 brokers 在线"
+              fi
+              
+              echo ""
+              echo "2. 检查 Topics 状态..."
+              
+              # 检查每个 topic
+              for topic in order-events payment-events inventory-events notification-events dead-letter-queue; do
+                echo "   检查 topic: $topic"
+                
+                # 获取 topic 详情
+                TOPIC_INFO=$(kafka-topics --bootstrap-server kafka-0.kafka-headless:9093 --describe --topic $topic 2>&1)
+                
+                # 检查分区数
+                PARTITIONS=$(echo "$TOPIC_INFO" | grep -c "Partition:")
+                if [ "$PARTITIONS" -ne 3 ]; then
+                  echo "   ❌ $topic: 期望 3 个分区，实际 $PARTITIONS 个"
+                  exit 1
+                fi
+                
+                # 检查副本数
+                REPLICAS=$(echo "$TOPIC_INFO" | grep "Replicas:" | head -1 | grep -oP '\d+' | wc -l)
+                if [ "$REPLICAS" -ne 2 ]; then
+                  echo "   ❌ $topic: 期望 2 个副本，实际 $REPLICAS 个"
+                  exit 1
+                fi
+                
+                # 检查是否有 under-replicated 分区
+                UNDER_REPLICATED=$(echo "$TOPIC_INFO" | grep -c "Isr:.*," || true)
+                if [ "$UNDER_REPLICATED" -gt 0 ]; then
+                  echo "   ⚠️  $topic: 存在 under-replicated 分区"
+                fi
+                
+                echo "   ✓ $topic: 健康 (3 分区, 2 副本)"
+              done
+              
+              echo ""
+              echo "3. 检查消费者组延迟..."
+              
+              # 列出所有消费者组
+              CONSUMER_GROUPS=$(kafka-consumer-groups --bootstrap-server kafka-0.kafka-headless:9093 --list 2>/dev/null || echo "")
+              
+              if [ -z "$CONSUMER_GROUPS" ]; then
+                echo "   ℹ️  当前没有活跃的消费者组"
+              else
+                for group in $CONSUMER_GROUPS; do
+                  echo "   消费者组: $group"
+                  LAG=$(kafka-consumer-groups --bootstrap-server kafka-0.kafka-headless:9093 --describe --group $group 2>/dev/null | awk '{sum+=$5} END {print sum}' || echo "0")
+                  
+                  if [ "$LAG" -gt 1000 ]; then
+                    echo "   ⚠️  延迟较高: $LAG 条消息"
+                  else
+                    echo "   ✓ 延迟正常: $LAG 条消息"
+                  fi
+                done
+              fi
+              
+              echo ""
+              echo "4. 检查磁盘使用情况..."
+              df -h /var/lib/kafka/data | tail -1 | awk '{print "   磁盘使用: " $5 " (" $3 " / " $2 ")"}'
+              
+              echo ""
+              echo "=========================================="
+              echo "✓ Kafka 集群健康检查完成"
+              echo "=========================================="

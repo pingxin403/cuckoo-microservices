@@ -1,0 +1,428 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  service-overview.json: |
+    {
+      "dashboard": {
+        "title": "微服务概览",
+        "tags": ["microservices", "overview"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "服务 QPS",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (application)",
+                "legendFormat": "{{application}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "reqps", "label": "Requests/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 2,
+            "title": "服务响应时间 (P99)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (application, le))",
+                "legendFormat": "{{application}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "s", "label": "Response Time"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 3,
+            "title": "服务错误率",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "(sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (application) / sum(rate(http_server_requests_seconds_count[5m])) by (application)) * 100",
+                "legendFormat": "{{application}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "percent", "label": "Error Rate"},
+              {"format": "short"}
+            ],
+            "alert": {
+              "conditions": [
+                {
+                  "evaluator": {"params": [1], "type": "gt"},
+                  "operator": {"type": "and"},
+                  "query": {"params": ["A", "5m", "now"]},
+                  "reducer": {"params": [], "type": "avg"},
+                  "type": "query"
+                }
+              ],
+              "name": "High Error Rate"
+            }
+          },
+          {
+            "id": 4,
+            "title": "服务可用性",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "up{job=~\".*-service\"}",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "options": {
+              "colorMode": "background",
+              "graphMode": "none",
+              "orientation": "auto",
+              "textMode": "value_and_name"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "mappings": [
+                  {"type": "value", "value": "0", "text": "DOWN", "color": "red"},
+                  {"type": "value", "value": "1", "text": "UP", "color": "green"}
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": 0, "color": "red"},
+                    {"value": 1, "color": "green"}
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+
+  jvm-monitoring.json: |
+    {
+      "dashboard": {
+        "title": "JVM 监控",
+        "tags": ["jvm", "memory", "gc"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "JVM 堆内存使用率",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "(sum(jvm_memory_used_bytes{area=\"heap\"}) by (application) / sum(jvm_memory_max_bytes{area=\"heap\"}) by (application)) * 100",
+                "legendFormat": "{{application}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "percent", "label": "Memory Usage", "max": 100},
+              {"format": "short"}
+            ],
+            "alert": {
+              "conditions": [
+                {
+                  "evaluator": {"params": [80], "type": "gt"},
+                  "operator": {"type": "and"},
+                  "query": {"params": ["A", "5m", "now"]},
+                  "reducer": {"params": [], "type": "avg"},
+                  "type": "query"
+                }
+              ],
+              "name": "High JVM Memory Usage"
+            }
+          },
+          {
+            "id": 2,
+            "title": "JVM 堆内存详情",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(jvm_memory_used_bytes{area=\"heap\"}) by (application)",
+                "legendFormat": "{{application}} - Used"
+              },
+              {
+                "expr": "sum(jvm_memory_committed_bytes{area=\"heap\"}) by (application)",
+                "legendFormat": "{{application}} - Committed"
+              },
+              {
+                "expr": "sum(jvm_memory_max_bytes{area=\"heap\"}) by (application)",
+                "legendFormat": "{{application}} - Max"
+              }
+            ],
+            "yaxes": [
+              {"format": "bytes", "label": "Memory"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 3,
+            "title": "GC 次数",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(jvm_gc_pause_seconds_count[5m])",
+                "legendFormat": "{{application}} - {{action}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "ops", "label": "GC Count/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 4,
+            "title": "GC 时间",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(jvm_gc_pause_seconds_sum[5m])",
+                "legendFormat": "{{application}} - {{action}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "s", "label": "GC Time/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 5,
+            "title": "线程数",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "jvm_threads_live_threads",
+                "legendFormat": "{{application}} - Live"
+              },
+              {
+                "expr": "jvm_threads_peak_threads",
+                "legendFormat": "{{application}} - Peak"
+              }
+            ],
+            "yaxes": [
+              {"format": "short", "label": "Thread Count"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 6,
+            "title": "类加载数",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "jvm_classes_loaded_classes",
+                "legendFormat": "{{application}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "short", "label": "Classes Loaded"},
+              {"format": "short"}
+            ]
+          }
+        ]
+      }
+    }
+
+  business-metrics.json: |
+    {
+      "dashboard": {
+        "title": "业务指标监控",
+        "tags": ["business", "orders", "payments"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "订单创建数",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(order_created_total[5m])",
+                "legendFormat": "订单创建速率"
+              }
+            ],
+            "yaxes": [
+              {"format": "ops", "label": "Orders/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 2,
+            "title": "订单金额分布",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, rate(order_amount_bucket[5m]))",
+                "legendFormat": "P50"
+              },
+              {
+                "expr": "histogram_quantile(0.90, rate(order_amount_bucket[5m]))",
+                "legendFormat": "P90"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(order_amount_bucket[5m]))",
+                "legendFormat": "P99"
+              }
+            ],
+            "yaxes": [
+              {"format": "currencyUSD", "label": "Order Amount"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 3,
+            "title": "支付成功率",
+            "type": "gauge",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "(sum(rate(payment_success_total[5m])) / sum(rate(payment_total[5m]))) * 100"
+              }
+            ],
+            "options": {
+              "showThresholdLabels": false,
+              "showThresholdMarkers": true
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": 0, "color": "red"},
+                    {"value": 95, "color": "yellow"},
+                    {"value": 99, "color": "green"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "库存扣减操作",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(inventory_deducted_total[5m])",
+                "legendFormat": "扣减成功"
+              },
+              {
+                "expr": "rate(inventory_deduct_failed_total[5m])",
+                "legendFormat": "扣减失败"
+              }
+            ],
+            "yaxes": [
+              {"format": "ops", "label": "Operations/sec"},
+              {"format": "short"}
+            ]
+          }
+        ]
+      }
+    }
+
+  kafka-monitoring.json: |
+    {
+      "dashboard": {
+        "title": "Kafka 监控",
+        "tags": ["kafka", "messaging"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Kafka 消费延迟",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "kafka_consumer_lag_seconds",
+                "legendFormat": "{{consumer_group}} - {{topic}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "s", "label": "Lag Time"},
+              {"format": "short"}
+            ],
+            "alert": {
+              "conditions": [
+                {
+                  "evaluator": {"params": [60], "type": "gt"},
+                  "operator": {"type": "and"},
+                  "query": {"params": ["A", "2m", "now"]},
+                  "reducer": {"params": [], "type": "avg"},
+                  "type": "query"
+                }
+              ],
+              "name": "High Kafka Consumer Lag"
+            }
+          },
+          {
+            "id": 2,
+            "title": "Kafka 消息生产速率",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(kafka_producer_record_send_total[5m])",
+                "legendFormat": "{{client_id}} - {{topic}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "ops", "label": "Messages/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Kafka 消息消费速率",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(kafka_consumer_records_consumed_total[5m])",
+                "legendFormat": "{{client_id}} - {{topic}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "ops", "label": "Messages/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Kafka 消息积压",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "kafka_consumer_records_lag",
+                "legendFormat": "{{consumer_group}} - {{topic}} - {{partition}}"
+              }
+            ],
+            "yaxes": [
+              {"format": "short", "label": "Messages"},
+              {"format": "short"}
+            ]
+          }
+        ]
+      }
+    }

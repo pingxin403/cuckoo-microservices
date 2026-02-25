@@ -18,13 +18,13 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 public class OrderCreatedEvent extends DomainEvent {
 
-    private Long orderId;
+    private String orderId;  // Changed from Long to String for CQRS UUID support
     private Long userId;
     private Long skuId;
     private Integer quantity;
     private BigDecimal totalAmount;
 
-    public OrderCreatedEvent(Long orderId, Long userId, Long skuId, Integer quantity, BigDecimal totalAmount, String version) {
+    public OrderCreatedEvent(String orderId, Long userId, Long skuId, Integer quantity, BigDecimal totalAmount, Integer version) {
         init("ORDER_CREATED", version);
         this.orderId = orderId;
         this.userId = userId;
@@ -34,9 +34,9 @@ public class OrderCreatedEvent extends DomainEvent {
     }
 
     /**
-     * 使用默认版本号 "1.0" 创建事件
+     * 使用默认版本号 1 创建事件
      */
-    public static OrderCreatedEvent create(Long orderId, Long userId, Long skuId, Integer quantity, BigDecimal totalAmount) {
-        return new OrderCreatedEvent(orderId, userId, skuId, quantity, totalAmount, "1.0");
+    public static OrderCreatedEvent create(String orderId, Long userId, Long skuId, Integer quantity, BigDecimal totalAmount) {
+        return new OrderCreatedEvent(orderId, userId, skuId, quantity, totalAmount, 1);
     }
 }

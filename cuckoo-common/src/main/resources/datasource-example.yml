@@ -1,0 +1,47 @@
+# 数据库读写分离配置示例
+# 将此配置复制到各个微服务的 application.yml 中
+
+spring:
+  datasource:
+    # 主库配置（必需）
+    master:
+      jdbc-url: jdbc:mysql://mysql-master:3306/${database_name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # HikariCP 连接池配置
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+    
+    # 从库配置（可选，支持多个从库）
+    slaves:
+      # 从库1
+      - jdbc-url: jdbc:mysql://mysql-slave1:3306/${database_name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+        username: root
+        password: root
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+      
+      # 从库2
+      - jdbc-url: jdbc:mysql://mysql-slave2:3306/${database_name}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+        username: root
+        password: root
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+
+# 注意事项：
+# 1. 将 ${database_name} 替换为实际的数据库名称（如 order_db, product_db）
+# 2. 如果只有主库，可以不配置 slaves 部分，读操作会自动路由到主库
+# 3. 连接池参数可根据实际负载调整
+# 4. 确保主从数据库已正确配置复制关系
