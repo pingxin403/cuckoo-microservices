@@ -1,0 +1,64 @@
+# 生产环境配置
+spring:
+  # 数据源配置（生产环境应使用环境变量）
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${spring.application.database-name}?useSSL=true&requireSSL=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+
+  # JPA 配置
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # Kafka 配置
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+
+  # Redis 配置
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+  # Nacos 配置
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+      config:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+
+# SpringDoc OpenAPI 配置 - 生产环境禁用 Swagger UI
+springdoc:
+  api-docs:
+    enabled: true  # 保留 OpenAPI JSON 端点
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false  # 禁用 Swagger UI
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.pingxin403.cuckoo: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+
+# Actuator 配置 - 生产环境限制暴露端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# OpenTelemetry 配置 - 生产环境降低采样率
+otel:
+  traces:
+    sampler:
+      probability: 0.1  # 10% 采样率

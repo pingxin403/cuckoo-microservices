@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: cuckoo-web-bff
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yml
+        refresh-enabled: true
+        shared-configs:
+          - data-id: application-common.yml
+            group: DEFAULT_GROUP
+            refresh: true

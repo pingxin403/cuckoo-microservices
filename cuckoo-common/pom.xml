@@ -93,6 +93,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- SpringDoc OpenAPI (optional for audit log controller) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

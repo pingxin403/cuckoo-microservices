@@ -21,6 +21,8 @@
         <module>cuckoo-payment</module>
         <module>cuckoo-notification</module>
         <module>cuckoo-gateway</module>
+        <module>cuckoo-mobile-bff</module>
+        <module>cuckoo-web-bff</module>
     </modules>
 
     <properties>
@@ -53,6 +55,9 @@
         
         <!-- Redisson -->
         <redisson.version>3.27.2</redisson.version>
+        
+        <!-- SpringDoc OpenAPI -->
+        <springdoc-openapi.version>2.5.0</springdoc-openapi.version>
     </properties>
 
     <dependencyManagement>
@@ -176,6 +181,13 @@
                 <groupId>org.redisson</groupId>
                 <artifactId>redisson-spring-boot-starter</artifactId>
                 <version>${redisson.version}</version>
+            </dependency>
+            
+            <!-- SpringDoc OpenAPI -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
