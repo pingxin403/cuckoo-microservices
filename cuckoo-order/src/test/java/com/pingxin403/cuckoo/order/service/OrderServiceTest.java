@@ -43,6 +43,15 @@ class OrderServiceTest {
     @Mock
     private EventPublisher eventPublisher;
 
+    @Mock
+    private com.pingxin403.cuckoo.common.message.LocalMessageService localMessageService;
+
+    @Mock
+    private com.pingxin403.cuckoo.order.saga.SagaOrchestrator sagaOrchestrator;
+
+    @Mock
+    private com.pingxin403.cuckoo.order.saga.OrderSagaDefinition orderSagaDefinition;
+
     @InjectMocks
     private OrderService orderService;
 

@@ -58,6 +58,13 @@ spring:
           predicates:
             - Path=/api/notifications/**
 
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+
 # 服务端口
 server:
   port: 8080
@@ -71,11 +78,3 @@ otel:
 jwt:
   secret: cuckoo-microservices-secret-key-for-jwt-token-generation-and-validation
   expiration: 86400000  # 24 小时（毫秒）
-
-# Redis 配置
-spring:
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 3000ms

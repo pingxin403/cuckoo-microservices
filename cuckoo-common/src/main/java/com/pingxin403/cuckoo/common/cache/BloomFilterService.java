@@ -1,6 +1,7 @@
 package com.pingxin403.cuckoo.common.cache;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
  */
 @Slf4j
 @Component
+@ConditionalOnClass(RedisTemplate.class)
 public class BloomFilterService {
     
     private static final String BLOOM_FILTER_KEY = "bloom:filter:products";

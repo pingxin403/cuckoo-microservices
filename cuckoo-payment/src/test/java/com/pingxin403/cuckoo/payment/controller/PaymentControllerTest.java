@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = com.pingxin403.cuckoo.payment.TestPaymentApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class PaymentControllerTest {

@@ -39,7 +39,7 @@ class PaymentSuccessEventConsumerTest {
 
     @BeforeEach
     void setUp() {
-        testEvent = PaymentSuccessEvent.create(200L, 300L, 100L, new BigDecimal("99.99"));
+        testEvent = PaymentSuccessEvent.create(200L, 300L, 100L, new BigDecimal("99.99"), "ALIPAY");
     }
 
     @Test

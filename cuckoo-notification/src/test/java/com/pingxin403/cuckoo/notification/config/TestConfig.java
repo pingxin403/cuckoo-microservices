@@ -1,17 +1,28 @@
 package com.pingxin403.cuckoo.notification.config;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.audit.AuditLogRepository;
+import com.pingxin403.cuckoo.common.audit.AuditLogService;
+import com.pingxin403.cuckoo.common.event.DomainEvent;
 import com.pingxin403.cuckoo.common.idempotency.IdempotencyService;
 import com.pingxin403.cuckoo.common.idempotency.ProcessedEventRepository;
+import com.pingxin403.cuckoo.common.message.LocalMessageRepository;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 
+import java.util.concurrent.CompletableFuture;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test configuration to provide mock beans for dependencies from common module
- * that are not needed for Notification Service tests.
+ * that are not needed for Notification Service tests
  */
 @TestConfiguration
 public class TestConfig {
@@ -30,7 +41,42 @@ public class TestConfig {
 
     @Bean
     @Primary
-    public EventPublisher eventPublisher() {
-        return mock(EventPublisher.class);
+    @SuppressWarnings("unchecked")
+    public KafkaTemplate<String, DomainEvent> kafkaTemplate() {
+        KafkaTemplate<String, DomainEvent> kafkaTemplate = mock(KafkaTemplate.class);
+        
+        // Mock KafkaTemplate behavior to avoid actual Kafka connection
+        SendResult<String, DomainEvent> sendResult = mock(SendResult.class);
+        CompletableFuture<SendResult<String, DomainEvent>> future = 
+            CompletableFuture.completedFuture(sendResult);
+        
+        when(kafkaTemplate.send(anyString(), anyString(), any(DomainEvent.class)))
+            .thenReturn(future);
+        
+        return kafkaTemplate;
+    }
+
+    @Bean
+    @Primary
+    public KafkaListenerEndpointRegistry kafkaListenerEndpointRegistry() {
+        return mock(KafkaListenerEndpointRegistry.class);
+    }
+
+    @Bean
+    @Primary
+    public AuditLogRepository auditLogRepository() {
+        return mock(AuditLogRepository.class);
+    }
+
+    @Bean
+    @Primary
+    public AuditLogService auditLogService() {
+        return mock(AuditLogService.class);
+    }
+
+    @Bean
+    @Primary
+    public LocalMessageRepository localMessageRepository() {
+        return mock(LocalMessageRepository.class);
     }
 }

@@ -5,11 +5,17 @@ spring:
   application:
     name: api-gateway
 
-  # 禁用 DataSource 自动配置（Gateway 不需要数据库）
+  # 允许 Bean 定义覆盖（测试环境需要）
+  main:
+    allow-bean-definition-overriding: true
+
+  # 禁用 DataSource 和 Redis 自动配置（Gateway 测试不需要）
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
 
   # 测试环境禁用 Nacos
   cloud:

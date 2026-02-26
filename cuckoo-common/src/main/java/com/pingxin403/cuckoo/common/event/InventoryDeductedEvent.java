@@ -18,10 +18,10 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class InventoryDeductedEvent extends DomainEvent {
 
-    private Long orderId;
+    private String orderId;
     private List<InventoryChange> changes;
 
-    public InventoryDeductedEvent(Long orderId, List<InventoryChange> changes, Integer version) {
+    public InventoryDeductedEvent(String orderId, List<InventoryChange> changes, Integer version) {
         init("INVENTORY_DEDUCTED", version);
         this.orderId = orderId;
         this.changes = changes;
@@ -30,7 +30,7 @@ public class InventoryDeductedEvent extends DomainEvent {
     /**
      * 使用默认版本号 1 创建事件
      */
-    public static InventoryDeductedEvent create(Long orderId, List<InventoryChange> changes) {
+    public static InventoryDeductedEvent create(String orderId, List<InventoryChange> changes) {
         return new InventoryDeductedEvent(orderId, changes, 1);
     }
 

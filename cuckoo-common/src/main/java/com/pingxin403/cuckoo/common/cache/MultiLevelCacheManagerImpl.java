@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -19,9 +20,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * 多级缓存管理器实现
  * L1: 本地缓存（Caffeine）- 5分钟过期，最大10000条
  * L2: 分布式缓存（Redis）- 1小时过期
+ * 
+ * 条件加载：
+ * - 需要 Caffeine 在 classpath 中（本地缓存）
+ * - 需要 RedisTemplate 在 classpath 中（分布式缓存）
  */
 @Slf4j
 @Component
+@ConditionalOnClass(value = Caffeine.class, name = "org.springframework.data.redis.core.RedisTemplate")
 public class MultiLevelCacheManagerImpl implements MultiLevelCacheManager {
     
     private static final String CACHE_EVICT_CHANNEL = "cache:evict";

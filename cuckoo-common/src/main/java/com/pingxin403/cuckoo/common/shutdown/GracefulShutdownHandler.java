@@ -3,13 +3,13 @@ package com.pingxin403.cuckoo.common.shutdown;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -27,10 +27,15 @@ import java.util.concurrent.TimeUnit;
  * 4. 等待现有请求处理完成
  * 5. 关闭资源连接（数据库、Redis、Kafka）
  * 
+ * Note: Redis-related functionality has been removed to avoid ClassNotFoundException
+ * when Redis is not on the classpath. Services that need Redis shutdown handling
+ * should implement it separately.
+ * 
  * 验证需求：9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7
  */
 @Slf4j
 @Component
+@ConditionalOnClass(KafkaTemplate.class)
 public class GracefulShutdownHandler implements ApplicationListener<ContextClosedEvent> {
     
     /**
@@ -55,9 +60,6 @@ public class GracefulShutdownHandler implements ApplicationListener<ContextClose
     
     @Autowired(required = false)
     private DataSource dataSource;
-    
-    @Autowired(required = false)
-    private RedisConnectionFactory redisConnectionFactory;
     
     @Autowired(required = false)
     private KafkaTemplate<?, ?> kafkaTemplate;
@@ -249,16 +251,16 @@ public class GracefulShutdownHandler implements ApplicationListener<ContextClose
     
     /**
      * 关闭资源连接
-     * 验证需求：9.5, 9.6, 9.7
+     * 验证需求：9.5, 9.7
+     * 
+     * Note: Redis shutdown has been removed to avoid ClassNotFoundException.
+     * Services using Redis should handle Redis shutdown separately.
      */
     private void closeResources() {
         log.info("Closing resource connections...");
         
         // 关闭 Kafka 生产者
         closeKafkaProducer();
-        
-        // 关闭 Redis 连接池
-        closeRedisConnections();
         
         // 关闭数据库连接池
         closeDatabaseConnections();
@@ -284,26 +286,6 @@ public class GracefulShutdownHandler implements ApplicationListener<ContextClose
             log.info("Kafka producer closed successfully");
         } catch (Exception e) {
             log.error("Error closing Kafka producer", e);
-        }
-    }
-    
-    /**
-     * 关闭 Redis 连接池
-     * 验证需求：9.6
-     */
-    private void closeRedisConnections() {
-        if (redisConnectionFactory == null) {
-            log.debug("Redis connection factory not configured, skipping Redis shutdown");
-            return;
-        }
-        
-        try {
-            log.info("Closing Redis connection pool...");
-            // Redis 连接工厂会在 Spring 容器关闭时自动关闭
-            // 这里只是记录日志
-            log.info("Redis connection pool will be closed by Spring");
-        } catch (Exception e) {
-            log.error("Error closing Redis connections", e);
         }
     }
     

@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
  */
 @JqwikSpringSupport
-@SpringBootTest
+@SpringBootTest(classes = com.pingxin403.cuckoo.payment.TestPaymentApplication.class)
 @ActiveProfiles("test")
 @Import(TestConfig.class)
 class PaymentServicePropertyTest {

@@ -36,6 +36,11 @@ spring:
       config:
         enabled: false
 
+  # Exclude Kafka auto-configuration to prevent KafkaMetrics from loading
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+
 # Disable OpenTelemetry for tests
 otel:
   sdk:

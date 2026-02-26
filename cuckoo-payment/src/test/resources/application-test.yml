@@ -37,6 +37,11 @@ spring:
       config:
         enabled: false
 
+# Disable cache Redis configuration for tests (payment service doesn't use Redis)
+cache:
+  redis:
+    enabled: false
+
 # Disable OpenTelemetry for tests
 otel:
   sdk:

@@ -31,7 +31,13 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = CuckooOrderApplication.class),
                 @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.pingxin403\\.cuckoo\\.order\\.consumer\\..*"),
                 @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.pingxin403\\.cuckoo\\.order\\.job\\..*"),
-                @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.pingxin403\\.cuckoo\\.order\\.client\\..*")
+                @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.pingxin403\\.cuckoo\\.order\\.client\\..*"),
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                        com.pingxin403.cuckoo.order.service.OrderReadModelUpdater.class,
+                        com.pingxin403.cuckoo.order.service.OrderReadModelRepairService.class,
+                        com.pingxin403.cuckoo.order.controller.OrderReadModelRepairController.class,
+                        com.pingxin403.cuckoo.common.audit.AuditLogAspect.class
+                })
         }
 )
 @EnableJpaRepositories(basePackages = {

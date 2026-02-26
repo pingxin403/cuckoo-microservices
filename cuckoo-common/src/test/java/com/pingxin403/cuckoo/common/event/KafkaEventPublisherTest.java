@@ -39,7 +39,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldPublishEventAsynchronously() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
 
@@ -54,7 +54,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldPublishEventToSpecificTopic() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
 
@@ -68,7 +68,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldPublishEventWithCustomKey() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         String customKey = "order-1";
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
@@ -83,7 +83,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldAutoSetEventIdIfNotPresent() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         event.setEventId(null); // 清空 eventId
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
@@ -99,7 +99,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldAutoSetTimestampIfNotPresent() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         event.setTimestamp(null); // 清空 timestamp
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
@@ -115,8 +115,8 @@ class KafkaEventPublisherTest {
     @Test
     void shouldPublishBatchEvents() {
         // Given
-        OrderCreatedEvent event1 = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
-        OrderCreatedEvent event2 = OrderCreatedEvent.create(2L, 2L, 2L, 3, new BigDecimal("200.00"));
+        OrderCreatedEvent event1 = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event2 = OrderCreatedEvent.create("order-2", 2L, 2L, 3, new BigDecimal("200.00"));
         List<DomainEvent> events = Arrays.asList(event1, event2);
         
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
@@ -133,7 +133,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldRouteOrderEventsToOrderTopic() {
         // Given
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 1L, 1L, 2, new BigDecimal("100.00"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 1L, 1L, 2, new BigDecimal("100.00"));
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
 
@@ -165,7 +165,7 @@ class KafkaEventPublisherTest {
     @Test
     void shouldRouteInventoryEventsToInventoryTopic() {
         // Given
-        InventoryDeductedEvent event = InventoryDeductedEvent.create(1L, Arrays.asList());
+        InventoryDeductedEvent event = InventoryDeductedEvent.create("1", Arrays.asList());
         CompletableFuture<SendResult<String, DomainEvent>> future = CompletableFuture.completedFuture(null);
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(future);
 

@@ -2,6 +2,7 @@ package com.pingxin403.cuckoo.common.health;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,7 @@ import java.time.Duration;
  */
 @Slf4j
 @Component
+@ConditionalOnClass(RedisTemplate.class)
 public class HealthCheckService {
     
     @Autowired(required = false)

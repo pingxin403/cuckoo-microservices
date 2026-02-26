@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,6 +33,15 @@ class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private com.pingxin403.cuckoo.common.cache.MultiLevelCacheManager multiLevelCacheManager;
+
+    @Mock
+    private com.pingxin403.cuckoo.common.cache.BloomFilterService bloomFilterService;
+
+    @Mock
+    private org.redisson.api.RedissonClient redissonClient;
 
     @Mock
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
@@ -57,6 +67,21 @@ class ProductServiceTest {
         
         // Mock RedisTemplate behavior
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        
+        // Mock BloomFilterService to return true (item might exist)
+        when(bloomFilterService.mightContain(anyString())).thenReturn(true);
+        
+        // Mock MultiLevelCacheManager to return null (cache miss)
+        when(multiLevelCacheManager.get(anyString(), any())).thenReturn(null);
+        
+        // Mock RedissonClient lock behavior
+        org.redisson.api.RLock lock = mock(org.redisson.api.RLock.class);
+        try {
+            when(lock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).thenReturn(true);
+        } catch (InterruptedException e) {
+            // Won't happen in mock
+        }
+        when(redissonClient.getLock(anyString())).thenReturn(lock);
     }
 
     // ========== CreateProduct Tests ==========
@@ -109,7 +134,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("getProductById - should return ProductDTO when product exists")
     void getProductById_success() {
-        when(valueOperations.get("product:1")).thenReturn(null); // Cache miss
         when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
 
         ProductDTO result = productService.getProductById(1L);
@@ -120,14 +144,16 @@ class ProductServiceTest {
         assertThat(result.getPrice()).isEqualByComparingTo(new BigDecimal("99.99"));
         assertThat(result.getDescription()).isEqualTo("A test product description");
         
-        verify(valueOperations).set(eq("product:1"), any(ProductDTO.class), eq(30L), eq(java.util.concurrent.TimeUnit.MINUTES));
+        // Verify cache was checked twice (initial check + double-check after lock) and updated
+        verify(multiLevelCacheManager, times(2)).get(eq("product:1"), eq(ProductDTO.class));
+        verify(multiLevelCacheManager).put(eq("product:1"), any(ProductDTO.class), any());
     }
 
     @Test
     @DisplayName("getProductById - should throw ResourceNotFoundException when product not found")
     void getProductById_notFound() {
-        when(valueOperations.get("product:999")).thenReturn(null); // Cache miss
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        // Mock bloom filter to return false (item doesn't exist)
+        when(bloomFilterService.mightContain("999")).thenReturn(false);
 
         assertThatThrownBy(() -> productService.getProductById(999L))
                 .isInstanceOf(ResourceNotFoundException.class)

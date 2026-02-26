@@ -43,6 +43,7 @@ class RequestLoggingFilterTest {
         
         // 设置日志捕获
         logger = (Logger) LoggerFactory.getLogger(RequestLoggingFilter.class);
+        logger.setLevel(ch.qos.logback.classic.Level.INFO); // Set to INFO to capture logs
         logAppender = new ListAppender<>();
         logAppender.start();
         logger.addAppender(logAppender);
@@ -112,13 +113,10 @@ class RequestLoggingFilterTest {
 
         when(chain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = filter.filter(exchange, chain);
+        // When - block() to ensure reactive chain completes and logs are written
+        filter.filter(exchange, chain).block();
 
         // Then
-        StepVerifier.create(result)
-            .verifyComplete();
-        
         List<ILoggingEvent> logEvents = logAppender.list;
         assertThat(logEvents).hasSizeGreaterThanOrEqualTo(1);
         
@@ -141,13 +139,10 @@ class RequestLoggingFilterTest {
 
         when(chain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = filter.filter(exchange, chain);
+        // When - block() to ensure reactive chain completes and logs are written
+        filter.filter(exchange, chain).block();
 
         // Then
-        StepVerifier.create(result)
-            .verifyComplete();
-        
         List<ILoggingEvent> logEvents = logAppender.list;
         assertThat(logEvents).hasSizeGreaterThanOrEqualTo(2);
         
@@ -168,14 +163,12 @@ class RequestLoggingFilterTest {
 
         when(chain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = filter.filter(exchange, chain);
+        // When - block() to ensure reactive chain completes and logs are written
+        filter.filter(exchange, chain).block();
 
         // Then
-        StepVerifier.create(result)
-            .verifyComplete();
-        
         List<ILoggingEvent> logEvents = logAppender.list;
+        assertThat(logEvents).hasSizeGreaterThanOrEqualTo(1);
         ILoggingEvent requestLog = logEvents.get(0);
         assertThat(requestLog.getFormattedMessage()).contains("ip=203.0.113.1");
     }
@@ -191,14 +184,12 @@ class RequestLoggingFilterTest {
 
         when(chain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
 
-        // When
-        Mono<Void> result = filter.filter(exchange, chain);
+        // When - block() to ensure reactive chain completes and logs are written
+        filter.filter(exchange, chain).block();
 
         // Then
-        StepVerifier.create(result)
-            .verifyComplete();
-        
         List<ILoggingEvent> logEvents = logAppender.list;
+        assertThat(logEvents).hasSizeGreaterThanOrEqualTo(1);
         ILoggingEvent requestLog = logEvents.get(0);
         assertThat(requestLog.getFormattedMessage()).contains("ip=203.0.113.1");
     }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    简化的测试日志配置
+    用于减少测试运行时的日志噪音
+-->
+<configuration>
+
+    <!-- 控制台输出 - 简化格式 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 设置日志级别为 WARN，减少测试输出噪音 -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <!-- 降低第三方库日志级别 -->
+    <logger name="org.apache.kafka" level="ERROR"/>
+    <logger name="org.hibernate" level="ERROR"/>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="io.netty" level="ERROR"/>
+    <logger name="reactor.netty" level="ERROR"/>
+    
+    <!-- 保持应用日志为 WARN 级别 -->
+    <logger name="com.pingxin403.cuckoo" level="WARN"/>
+
+</configuration>

@@ -43,7 +43,7 @@ class EventPublisherTest {
         event.setEventType("ORDER_CREATED");
         event.setTimestamp(System.currentTimeMillis());
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
@@ -70,7 +70,7 @@ class EventPublisherTest {
         event.setEventId("test-event-id");
         event.setEventType("ORDER_CREATED");
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
@@ -102,7 +102,7 @@ class EventPublisherTest {
         event.setEventType("ORDER_CREATED");
         event.setTimestamp(System.currentTimeMillis());
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
@@ -129,7 +129,7 @@ class EventPublisherTest {
         event.setEventType("ORDER_CREATED");
         event.setTimestamp(existingTimestamp);
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
@@ -150,7 +150,7 @@ class EventPublisherTest {
     @Test
     void publish_withoutKey_shouldUseEventIdAsKey() {
         // Given: 创建一个事件
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 2, BigDecimal.valueOf(100));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 100L, 200L, 2, BigDecimal.valueOf(100));
         
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
@@ -170,7 +170,7 @@ class EventPublisherTest {
         event.setEventType("ORDER_CREATED");
         event.setTimestamp(System.currentTimeMillis());
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);
@@ -193,7 +193,7 @@ class EventPublisherTest {
     @Test
     void publish_shouldHandleKafkaException() {
         // Given: KafkaTemplate 抛出异常
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 2, BigDecimal.valueOf(100));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 100L, 200L, 2, BigDecimal.valueOf(100));
         when(kafkaTemplate.send(any(), any(), any())).thenReturn(java.util.concurrent.CompletableFuture.failedFuture(new RuntimeException("Kafka error")));
 
         // When: 发布事件
@@ -210,7 +210,7 @@ class EventPublisherTest {
         OrderCreatedEvent event = new OrderCreatedEvent();
         event.setEventType("ORDER_CREATED");
         event.setVersion(1);
-        event.setOrderId(1L);
+        event.setOrderId("order-1");
         event.setUserId(100L);
         event.setSkuId(200L);
         event.setQuantity(2);

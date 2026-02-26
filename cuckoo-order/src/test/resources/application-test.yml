@@ -30,11 +30,42 @@ spring:
     openfeign:
       enabled: false
   
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    listener:
+      # Disable Kafka listeners in tests
+      auto-startup: false
+  
+  # Disable Redis for tests
+  redis:
+    host: localhost
+    port: 6379
+  
+  data:
+    redis:
+      repositories:
+        enabled: false
+  
   autoconfigure:
     exclude:
       - org.springframework.cloud.openfeign.FeignAutoConfiguration
       - org.springframework.cloud.openfeign.hateoas.FeignHalAutoConfiguration
       - org.springframework.cloud.openfeign.loadbalancer.FeignLoadBalancerAutoConfiguration
+
+# Disable cache Redis configuration for tests
+cache:
+  redis:
+    enabled: false
 
 # Disable OpenTelemetry for tests
 otel:

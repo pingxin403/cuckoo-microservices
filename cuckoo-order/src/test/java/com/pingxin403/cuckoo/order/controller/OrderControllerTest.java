@@ -5,13 +5,16 @@ import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.OrderDTO;
 import com.pingxin403.cuckoo.order.service.OrderService;
+import com.pingxin403.cuckoo.order.service.OrderQueryService;
 import com.pingxin403.cuckoo.order.TestOrderApplication;
+import com.pingxin403.cuckoo.order.config.TestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -35,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 )
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestConfig.class)
 class OrderControllerTest {
 
     @Autowired
@@ -46,25 +51,39 @@ class OrderControllerTest {
     @MockBean
     private OrderService orderService;
 
+    @MockBean
+    private OrderQueryService orderQueryService;
+
+    @MockBean
+    private com.pingxin403.cuckoo.common.audit.AuditLogService auditLogService;
+
     private OrderDTO testOrderDTO;
 
     @BeforeEach
     void setUp() {
-        testOrderDTO = new OrderDTO(
-                1L,
-                "ORD123456",
-                1L,
-                100L,
-                "Test Product",
-                2,
-                new BigDecimal("50.00"),
-                new BigDecimal("100.00"),
-                "PENDING_PAYMENT",
-                null,
-                1L,
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
+        // Configure AuditLogService mock
+        when(auditLogService.buildAuditLog(any(), any(), anyString())).thenAnswer(invocation -> {
+            return com.pingxin403.cuckoo.common.audit.AuditLog.builder()
+                    .operationType((com.pingxin403.cuckoo.common.audit.AuditLog.OperationType) invocation.getArgument(0))
+                    .userId((Long) invocation.getArgument(1))
+                    .username(invocation.getArgument(2));
+        });
+        
+        testOrderDTO = OrderDTO.builder()
+                .id(1L)
+                .orderNo("ORD123456")
+                .userId(1L)
+                .skuId(100L)
+                .productName("Test Product")
+                .quantity(2)
+                .unitPrice(new BigDecimal("50.00"))
+                .totalAmount(new BigDecimal("100.00"))
+                .status("PENDING_PAYMENT")
+                .cancelReason(null)
+                .paymentId(1L)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
     }
 
     @Test
@@ -103,7 +122,7 @@ class OrderControllerTest {
     @Test
     void getUserOrders_shouldReturnOrderList() throws Exception {
         List<OrderDTO> orders = Arrays.asList(testOrderDTO);
-        when(orderService.getUserOrders(1L)).thenReturn(orders);
+        when(orderQueryService.getUserOrders(1L)).thenReturn(orders);
 
         mockMvc.perform(get("/api/orders/user/1"))
                 .andExpect(status().isOk())

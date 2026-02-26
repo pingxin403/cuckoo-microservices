@@ -1,9 +1,11 @@
 package com.pingxin403.cuckoo.inventory.service;
 
+import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
 import com.pingxin403.cuckoo.common.exception.InsufficientStockException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.inventory.config.InventoryConfig;
 import com.pingxin403.cuckoo.inventory.dto.InitInventoryRequest;
 import com.pingxin403.cuckoo.inventory.dto.InventoryDTO;
@@ -27,6 +29,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static org.mockito.Mockito.mock;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -80,13 +84,19 @@ class InventoryServiceTest {
         // Mock RedisTemplate behavior - set up lenient stubbing for all tests
         lenient().when(redisTemplate.opsForValue()).thenReturn(redisValueOperations);
         
+        // Mock EventPublisher and LocalMessageService
+        EventPublisher eventPublisher = mock(EventPublisher.class);
+        LocalMessageService localMessageService = mock(LocalMessageService.class);
+        
         // Manually create the service with mocked dependencies
         inventoryService = new InventoryService(
             inventoryRepository,
             inventoryLogRepository,
             stringRedisTemplate,
             redisTemplate,
-            inventoryConfig
+            inventoryConfig,
+            eventPublisher,
+            localMessageService
         );
     }
 

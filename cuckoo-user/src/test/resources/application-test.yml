@@ -29,16 +29,36 @@ spring:
         enabled: false
   
   kafka:
+    enabled: false
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   
-  # Disable Redis auto-configuration for tests (we use mocks)
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  # Disable Redis for tests
+  redis:
+    host: localhost
+    port: 6379
+  
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+# Disable cache Redis configuration for tests
+cache:
+  redis:
+    enabled: false
+
+# Disable message retry scheduler for tests
+cuckoo:
+  message:
+    retry:
+      enabled: false
+
+# Disable audit for tests
+audit:
+  enabled: false
 
 # Disable OpenTelemetry for tests
 otel:

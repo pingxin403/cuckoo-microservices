@@ -6,6 +6,11 @@ spring:
   main:
     allow-bean-definition-overriding: true
   
+  # Exclude Kafka auto-configuration for tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -34,11 +39,20 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   
-  # Disable Redis auto-configuration for tests (we use mocks)
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  # Disable Redis for tests
+  redis:
+    host: localhost
+    port: 6379
+  
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+# Disable cache Redis configuration for tests
+cache:
+  redis:
+    enabled: false
 
 # Disable OpenTelemetry for tests
 otel:

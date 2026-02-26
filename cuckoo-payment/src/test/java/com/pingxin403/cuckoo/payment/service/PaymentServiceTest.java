@@ -2,6 +2,7 @@ package com.pingxin403.cuckoo.payment.service;
 
 import com.pingxin403.cuckoo.common.event.EventPublisher;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.payment.entity.Payment;
 import com.pingxin403.cuckoo.payment.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,9 @@ class PaymentServiceTest {
 
     @Mock
     private EventPublisher eventPublisher;
+
+    @Mock
+    private LocalMessageService localMessageService;
 
     @InjectMocks
     private PaymentService paymentService;

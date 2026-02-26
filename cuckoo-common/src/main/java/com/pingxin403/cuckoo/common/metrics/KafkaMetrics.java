@@ -3,7 +3,9 @@ package com.pingxin403.cuckoo.common.metrics;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 @Component
+@ConditionalOnClass(KafkaTemplate.class)
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.kafka.enabled", 
+    havingValue = "true", 
+    matchIfMissing = true
+)
 public class KafkaMetrics {
 
     private final MeterRegistry meterRegistry;

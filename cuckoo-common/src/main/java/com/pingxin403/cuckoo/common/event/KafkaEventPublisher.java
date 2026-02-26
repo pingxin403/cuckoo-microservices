@@ -2,6 +2,7 @@ package com.pingxin403.cuckoo.common.event;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.retry.annotation.Backoff;
@@ -31,6 +32,12 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnClass(KafkaTemplate.class)
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.kafka.enabled", 
+    havingValue = "true", 
+    matchIfMissing = true
+)
 public class KafkaEventPublisher implements EventPublisher {
 
     private final KafkaTemplate<String, DomainEvent> kafkaTemplate;

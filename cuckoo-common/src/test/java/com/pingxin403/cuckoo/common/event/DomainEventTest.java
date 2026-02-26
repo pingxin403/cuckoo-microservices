@@ -14,7 +14,7 @@ class DomainEventTest {
     @Test
     void orderCreatedEvent_shouldHaveCorrectFields() {
         long before = System.currentTimeMillis();
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 5, new BigDecimal("99.99"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 100L, 200L, 5, new BigDecimal("99.99"));
         long after = System.currentTimeMillis();
 
         assertNotNull(event.getEventId());
@@ -23,7 +23,7 @@ class DomainEventTest {
         assertEquals(1, event.getVersion());
         assertNotNull(event.getTimestamp());
         assertTrue(event.getTimestamp() >= before && event.getTimestamp() <= after);
-        assertEquals(1L, event.getOrderId());
+        assertEquals("order-1", event.getOrderId());
         assertEquals(100L, event.getUserId());
         assertEquals(200L, event.getSkuId());
         assertEquals(5, event.getQuantity());
@@ -80,8 +80,8 @@ class DomainEventTest {
 
     @Test
     void differentEvents_shouldHaveDifferentEventIds() {
-        OrderCreatedEvent event1 = OrderCreatedEvent.create(1L, 100L, 200L, 1, BigDecimal.TEN);
-        OrderCreatedEvent event2 = OrderCreatedEvent.create(2L, 100L, 200L, 1, BigDecimal.TEN);
+        OrderCreatedEvent event1 = OrderCreatedEvent.create("order-1", 100L, 200L, 1, BigDecimal.TEN);
+        OrderCreatedEvent event2 = OrderCreatedEvent.create("order-2", 100L, 200L, 1, BigDecimal.TEN);
 
         assertNotEquals(event1.getEventId(), event2.getEventId());
     }
@@ -97,7 +97,7 @@ class DomainEventTest {
 
     @Test
     void event_shouldSupportPayloadOperations() {
-        OrderCreatedEvent event = OrderCreatedEvent.create(1L, 100L, 200L, 5, new BigDecimal("99.99"));
+        OrderCreatedEvent event = OrderCreatedEvent.create("order-1", 100L, 200L, 5, new BigDecimal("99.99"));
         
         // Test adding payload
         event.addPayload("source", "mobile");

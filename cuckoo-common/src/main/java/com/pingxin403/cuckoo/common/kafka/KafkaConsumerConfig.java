@@ -5,6 +5,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -31,6 +32,7 @@ import java.util.Map;
  */
 @Slf4j
 @Configuration
+@ConditionalOnClass(KafkaTemplate.class)
 public class KafkaConsumerConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")

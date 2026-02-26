@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: web-bff-test
+
+  # Allow bean definition overriding for test mocks
+  main:
+    allow-bean-definition-overriding: true
+
+  # Disable auto-configuration for JPA and other unused features
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+
+  # Disable Nacos
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+  # Explicitly disable Kafka
+  kafka:
+    enabled: false
+
+# Disable cache Redis configuration for tests
+cache:
+  redis:
+    enabled: false
+
+# Disable OpenTelemetry for tests
+otel:
+  sdk:
+    disabled: true
+
+# Disable Actuator for tests
+management:
+  endpoints:
+    enabled-by-default: false
+
+# Disable audit logging for tests
+audit:
+  enabled: false
+
+# Disable idempotency service for tests (requires JPA)
+idempotency:
+  enabled: false
+
+# Disable local message service for tests (requires JPA)
+local-message:
+  enabled: false
+
+# Random port for tests
+server:
+  port: 0

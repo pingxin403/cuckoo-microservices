@@ -176,7 +176,7 @@ public class InventoryService {
         );
         
         InventoryDeductedEvent event = InventoryDeductedEvent.create(
-                Long.parseLong(request.getOrderId()),
+                request.getOrderId(),
                 Collections.singletonList(change)
         );
         
