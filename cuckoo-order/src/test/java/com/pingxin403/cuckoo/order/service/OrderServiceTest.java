@@ -41,7 +41,7 @@ class OrderServiceTest {
     private PaymentClient paymentClient;
 
     @Mock
-    private EventPublisher eventPublisher;
+    private com.pingxin403.cuckoo.common.event.EventPublisherUtil eventPublisher;
 
     @Mock
     private com.pingxin403.cuckoo.common.message.LocalMessageService localMessageService;
@@ -51,6 +51,9 @@ class OrderServiceTest {
 
     @Mock
     private com.pingxin403.cuckoo.order.saga.OrderSagaDefinition orderSagaDefinition;
+
+    @Mock
+    private com.pingxin403.cuckoo.order.mapper.OrderMapper orderMapper;
 
     @InjectMocks
     private OrderService orderService;
@@ -98,6 +101,20 @@ class OrderServiceTest {
         doNothing().when(inventoryClient).reserveInventory(any(ReserveInventoryRequest.class));
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
         when(paymentClient.createPayment(any(CreatePaymentRequest.class))).thenReturn(testPayment);
+        
+        // Mock OrderMapper
+        OrderDTO expectedDTO = OrderDTO.builder()
+                .id(testOrder.getId())
+                .orderNo(testOrder.getOrderNo())
+                .userId(testOrder.getUserId())
+                .skuId(testOrder.getSkuId())
+                .productName(testOrder.getProductName())
+                .quantity(testOrder.getQuantity())
+                .unitPrice(testOrder.getUnitPrice())
+                .totalAmount(testOrder.getTotalAmount())
+                .status(testOrder.getStatus().name())
+                .build();
+        when(orderMapper.toDTO(any(Order.class))).thenReturn(expectedDTO);
 
         OrderDTO result = orderService.createOrder(request);
 
@@ -129,6 +146,20 @@ class OrderServiceTest {
     @Test
     void getOrder_shouldReturnOrder() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(testOrder));
+        
+        // Mock OrderMapper
+        OrderDTO expectedDTO = OrderDTO.builder()
+                .id(testOrder.getId())
+                .orderNo(testOrder.getOrderNo())
+                .userId(testOrder.getUserId())
+                .skuId(testOrder.getSkuId())
+                .productName(testOrder.getProductName())
+                .quantity(testOrder.getQuantity())
+                .unitPrice(testOrder.getUnitPrice())
+                .totalAmount(testOrder.getTotalAmount())
+                .status(testOrder.getStatus().name())
+                .build();
+        when(orderMapper.toDTO(any(Order.class))).thenReturn(expectedDTO);
 
         OrderDTO result = orderService.getOrder(1L);
 
@@ -151,6 +182,20 @@ class OrderServiceTest {
     void getUserOrders_shouldReturnOrderList() {
         List<Order> orders = Arrays.asList(testOrder);
         when(orderRepository.findByUserId(1L)).thenReturn(orders);
+        
+        // Mock OrderMapper
+        OrderDTO expectedDTO = OrderDTO.builder()
+                .id(testOrder.getId())
+                .orderNo(testOrder.getOrderNo())
+                .userId(testOrder.getUserId())
+                .skuId(testOrder.getSkuId())
+                .productName(testOrder.getProductName())
+                .quantity(testOrder.getQuantity())
+                .unitPrice(testOrder.getUnitPrice())
+                .totalAmount(testOrder.getTotalAmount())
+                .status(testOrder.getStatus().name())
+                .build();
+        when(orderMapper.toDTOList(anyList())).thenReturn(Arrays.asList(expectedDTO));
 
         List<OrderDTO> result = orderService.getUserOrders(1L);
 
@@ -182,6 +227,31 @@ class OrderServiceTest {
         cancelledOrder.setUpdatedAt(LocalDateTime.now());
         
         when(orderRepository.save(any(Order.class))).thenReturn(cancelledOrder);
+        
+        // Mock localMessageService
+        doNothing().when(localMessageService).saveMessage(any());
+        doNothing().when(localMessageService).markAsSent(anyString());
+        
+        // Mock eventPublisher to return a completed future with proper type
+        org.springframework.kafka.support.SendResult<String, com.pingxin403.cuckoo.common.event.DomainEvent> mockSendResult = 
+            mock(org.springframework.kafka.support.SendResult.class);
+        when(eventPublisher.publish(anyString(), anyString(), any()))
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(mockSendResult));
+        
+        // Mock OrderMapper
+        OrderDTO expectedDTO = OrderDTO.builder()
+                .id(cancelledOrder.getId())
+                .orderNo(cancelledOrder.getOrderNo())
+                .userId(cancelledOrder.getUserId())
+                .skuId(cancelledOrder.getSkuId())
+                .productName(cancelledOrder.getProductName())
+                .quantity(cancelledOrder.getQuantity())
+                .unitPrice(cancelledOrder.getUnitPrice())
+                .totalAmount(cancelledOrder.getTotalAmount())
+                .status(cancelledOrder.getStatus().name())
+                .cancelReason(cancelledOrder.getCancelReason())
+                .build();
+        when(orderMapper.toDTO(any(Order.class))).thenReturn(expectedDTO);
 
         OrderDTO result = orderService.cancelOrder(1L);
 
@@ -189,6 +259,7 @@ class OrderServiceTest {
         assertEquals("用户主动取消", result.getCancelReason());
         verify(orderRepository).findById(1L);
         verify(orderRepository).save(any(Order.class));
+        verify(localMessageService).saveMessage(any());
         verify(eventPublisher).publish(eq("order-events"), anyString(), any());
     }
 
@@ -249,10 +320,21 @@ class OrderServiceTest {
     @Test
     void cancelTimeoutOrder_shouldCancelAndPublishEvent() {
         when(orderRepository.save(any(Order.class))).thenReturn(testOrder);
+        
+        // Mock localMessageService
+        doNothing().when(localMessageService).saveMessage(any());
+        doNothing().when(localMessageService).markAsSent(anyString());
+        
+        // Mock eventPublisher to return a completed future with proper type
+        org.springframework.kafka.support.SendResult<String, com.pingxin403.cuckoo.common.event.DomainEvent> mockSendResult = 
+            mock(org.springframework.kafka.support.SendResult.class);
+        when(eventPublisher.publish(anyString(), anyString(), any()))
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(mockSendResult));
 
         orderService.cancelTimeoutOrder(testOrder);
 
         verify(orderRepository).save(any(Order.class));
+        verify(localMessageService).saveMessage(any());
         verify(eventPublisher).publish(eq("order-events"), anyString(), any());
     }
 

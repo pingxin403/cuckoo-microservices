@@ -5,6 +5,7 @@ import com.pingxin403.cuckoo.common.controller.BaseController;
 import com.pingxin403.cuckoo.payment.dto.CreatePaymentRequest;
 import com.pingxin403.cuckoo.payment.dto.PaymentDTO;
 import com.pingxin403.cuckoo.payment.entity.Payment;
+import com.pingxin403.cuckoo.payment.mapper.PaymentMapper;
 import com.pingxin403.cuckoo.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController extends BaseController {
 
     private final PaymentService paymentService;
+    private final PaymentMapper paymentMapper;
 
     @PostMapping
     @SentinelResource(value = "POST:/api/payments")
@@ -28,7 +30,7 @@ public class PaymentController extends BaseController {
 
         Payment created = paymentService.createPayment(payment);
         logResponse("创建支付", created.getId());
-        return ok(PaymentDTO.fromEntity(created));
+        return created(paymentMapper.toDTO(created));
     }
 
     @PostMapping("/{id}/confirm")
@@ -36,7 +38,7 @@ public class PaymentController extends BaseController {
         logRequest("确认支付", id);
         Payment payment = paymentService.confirmPayment(id);
         logResponse("确认支付", payment.getId());
-        return ok(PaymentDTO.fromEntity(payment));
+        return ok(paymentMapper.toDTO(payment));
     }
 
     @PostMapping("/{id}/fail")
@@ -46,7 +48,7 @@ public class PaymentController extends BaseController {
         logRequest("支付失败", id, reason);
         Payment payment = paymentService.failPayment(id, reason);
         logResponse("支付失败", payment.getId());
-        return ok(PaymentDTO.fromEntity(payment));
+        return ok(paymentMapper.toDTO(payment));
     }
 
     @GetMapping("/{id}")
@@ -54,6 +56,6 @@ public class PaymentController extends BaseController {
         logRequest("查询支付", id);
         Payment payment = paymentService.getPaymentById(id);
         logResponse("查询支付", payment.getId());
-        return ok(PaymentDTO.fromEntity(payment));
+        return ok(paymentMapper.toDTO(payment));
     }
 }

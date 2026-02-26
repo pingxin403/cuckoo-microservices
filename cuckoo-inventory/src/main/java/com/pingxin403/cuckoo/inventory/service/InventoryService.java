@@ -1,6 +1,6 @@
 package com.pingxin403.cuckoo.inventory.service;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.EventPublisherUtil;
 import com.pingxin403.cuckoo.common.event.InventoryDeductedEvent;
 import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
@@ -13,6 +13,7 @@ import com.pingxin403.cuckoo.inventory.dto.InventoryDTO;
 import com.pingxin403.cuckoo.inventory.dto.InventoryOperationRequest;
 import com.pingxin403.cuckoo.inventory.entity.Inventory;
 import com.pingxin403.cuckoo.inventory.entity.InventoryLog;
+import com.pingxin403.cuckoo.inventory.mapper.InventoryMapper;
 import com.pingxin403.cuckoo.inventory.repository.InventoryLogRepository;
 import com.pingxin403.cuckoo.inventory.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,8 +44,9 @@ public class InventoryService {
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
     private final InventoryConfig inventoryConfig;
-    private final EventPublisher eventPublisher;
+    private final EventPublisherUtil eventPublisher;
     private final LocalMessageService localMessageService;
+    private final InventoryMapper inventoryMapper;
 
     private static final String LOCK_KEY_PREFIX = "inventory:lock:";
     private static final String CACHE_KEY_PREFIX = "inventory:";
@@ -71,7 +73,7 @@ public class InventoryService {
         Inventory saved = inventoryRepository.save(inventory);
         log.info("Inventory initialized: skuId={}, totalStock={}", saved.getSkuId(), saved.getTotalStock());
 
-        return toDTO(saved);
+        return inventoryMapper.toDTO(saved);
     }
 
     /**
@@ -185,7 +187,7 @@ public class InventoryService {
 
         // 异步发布事件到 Kafka（失败不影响事务提交）
         try {
-            eventPublisher.publish(INVENTORY_EVENTS_TOPIC, request.getOrderId(), event);
+            eventPublisher.publish(INVENTORY_EVENTS_TOPIC, event);
             localMessageService.markAsSent(event.getEventId());
             log.info("库存扣减事件已发布到 Kafka: eventId={}", event.getEventId());
         } catch (Exception e) {
@@ -263,7 +265,7 @@ public class InventoryService {
         Inventory inventory = inventoryRepository.findBySkuId(skuId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory", skuId));
         
-        InventoryDTO inventoryDTO = toDTO(inventory);
+        InventoryDTO inventoryDTO = inventoryMapper.toDTO(inventory);
         
         // 3. 将查询结果写入缓存，设置 TTL 为 10 分钟
         redisTemplate.opsForValue().set(cacheKey, inventoryDTO, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
@@ -312,20 +314,5 @@ public class InventoryService {
                 .quantity(quantity)
                 .build();
         inventoryLogRepository.save(logEntry);
-    }
-
-    /**
-     * 将 Inventory 实体转换为 InventoryDTO
-     */
-    private InventoryDTO toDTO(Inventory inventory) {
-        return InventoryDTO.builder()
-                .id(inventory.getId())
-                .skuId(inventory.getSkuId())
-                .totalStock(inventory.getTotalStock())
-                .availableStock(inventory.getAvailableStock())
-                .reservedStock(inventory.getReservedStock())
-                .createdAt(inventory.getCreatedAt())
-                .updatedAt(inventory.getUpdatedAt())
-                .build();
     }
 }

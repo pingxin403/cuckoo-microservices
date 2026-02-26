@@ -2,6 +2,7 @@ package com.pingxin403.cuckoo.order.service;
 
 import com.pingxin403.cuckoo.order.dto.OrderDTO;
 import com.pingxin403.cuckoo.order.entity.OrderRead;
+import com.pingxin403.cuckoo.order.mapper.OrderReadMapper;
 import com.pingxin403.cuckoo.order.repository.OrderReadRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 订单查询服务（CQRS 读模型）
@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class OrderQueryService {
 
     private final OrderReadRepository orderReadRepository;
+    private final OrderReadMapper orderReadMapper;
 
     /**
      * 根据订单 ID 查询订单详情（从读模型）
@@ -36,7 +37,7 @@ public class OrderQueryService {
         OrderRead orderRead = orderReadRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("订单不存在: orderId=" + orderId));
 
-        return convertToDTO(orderRead);
+        return orderReadMapper.toDTO(orderRead);
     }
 
     /**
@@ -47,9 +48,7 @@ public class OrderQueryService {
         log.info("查询用户订单列表（读模型）: userId={}", userId);
 
         List<OrderRead> orders = orderReadRepository.findByUserId(userId);
-        return orders.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return orderReadMapper.toDTOList(orders);
     }
 
     /**
@@ -62,7 +61,7 @@ public class OrderQueryService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<OrderRead> ordersPage = orderReadRepository.findByUserId(userId, pageable);
 
-        return ordersPage.map(this::convertToDTO);
+        return ordersPage.map(orderReadMapper::toDTO);
     }
 
     /**
@@ -73,9 +72,7 @@ public class OrderQueryService {
         log.info("根据状态查询订单列表（读模型）: status={}", status);
 
         List<OrderRead> orders = orderReadRepository.findByStatus(status);
-        return orders.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return orderReadMapper.toDTOList(orders);
     }
 
     /**
@@ -86,29 +83,6 @@ public class OrderQueryService {
         log.info("查询用户指定状态的订单列表（读模型）: userId={}, status={}", userId, status);
 
         List<OrderRead> orders = orderReadRepository.findByUserIdAndStatus(userId, status);
-        return orders.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 转换为 DTO
-     */
-    private OrderDTO convertToDTO(OrderRead orderRead) {
-        OrderDTO dto = new OrderDTO();
-        dto.setOrderId(orderRead.getOrderId());
-        dto.setUserId(orderRead.getUserId());
-        dto.setUserName(orderRead.getUserName());
-        dto.setTotalAmount(orderRead.getTotalAmount());
-        dto.setStatus(orderRead.getStatus());
-        dto.setStatusDisplay(orderRead.getStatusDisplay());
-        dto.setItemCount(orderRead.getItemCount());
-        dto.setProductNames(orderRead.getProductNames());
-        dto.setSkuIds(orderRead.getSkuIds());
-        dto.setPaymentId(orderRead.getPaymentId());
-        dto.setCancelReason(orderRead.getCancelReason());
-        dto.setCreatedAt(orderRead.getCreatedAt());
-        dto.setUpdatedAt(orderRead.getUpdatedAt());
-        return dto;
+        return orderReadMapper.toDTOList(orders);
     }
 }

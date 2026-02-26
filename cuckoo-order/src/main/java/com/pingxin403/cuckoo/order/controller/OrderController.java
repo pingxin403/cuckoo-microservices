@@ -41,7 +41,7 @@ public class OrderController extends BaseController {
     @Auditable(value = AuditLog.OperationType.CREATE_ORDER, resourceType = "ORDER", description = "创建订单")
     @Operation(summary = "创建订单", description = "根据用户ID、商品SKU和数量创建新订单")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "订单创建成功",
+            @ApiResponse(responseCode = "201", description = "订单创建成功",
                     content = @Content(schema = @Schema(implementation = OrderDTO.class))),
             @ApiResponse(responseCode = "400", description = "请求参数错误"),
             @ApiResponse(responseCode = "500", description = "服务器内部错误")
@@ -55,7 +55,7 @@ public class OrderController extends BaseController {
         logRequest("创建订单", request.getUserId(), request.getSkuId(), request.getQuantity());
         OrderDTO order = orderService.createOrder(request);
         logResponse("创建订单", order.getId());
-        return ok(order);
+        return created(order);
     }
 
     /**

@@ -28,6 +28,9 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private com.pingxin403.cuckoo.notification.mapper.NotificationMapper notificationMapper;
+
     @InjectMocks
     private NotificationService notificationService;
 
@@ -48,6 +51,17 @@ class NotificationServiceTest {
     void createNotification_ShouldCreateAndReturnNotification() {
         // Given
         when(notificationRepository.save(any(Notification.class))).thenReturn(testNotification);
+        
+        // Mock NotificationMapper
+        NotificationDTO expectedDTO = new NotificationDTO(
+                testNotification.getId(),
+                testNotification.getUserId(),
+                testNotification.getOrderId(),
+                testNotification.getType(),
+                testNotification.getContent(),
+                testNotification.getCreatedAt()
+        );
+        when(notificationMapper.toDTO(any(Notification.class))).thenReturn(expectedDTO);
 
         // When
         NotificationDTO result = notificationService.createNotification(
@@ -79,6 +93,25 @@ class NotificationServiceTest {
 
         List<Notification> notifications = Arrays.asList(testNotification, notification2);
         when(notificationRepository.findByUserIdOrderByCreatedAtDesc(100L)).thenReturn(notifications);
+        
+        // Mock NotificationMapper
+        NotificationDTO dto1 = new NotificationDTO(
+                testNotification.getId(),
+                testNotification.getUserId(),
+                testNotification.getOrderId(),
+                testNotification.getType(),
+                testNotification.getContent(),
+                testNotification.getCreatedAt()
+        );
+        NotificationDTO dto2 = new NotificationDTO(
+                notification2.getId(),
+                notification2.getUserId(),
+                notification2.getOrderId(),
+                notification2.getType(),
+                notification2.getContent(),
+                notification2.getCreatedAt()
+        );
+        when(notificationMapper.toDTOList(any())).thenReturn(Arrays.asList(dto1, dto2));
 
         // When
         List<NotificationDTO> result = notificationService.getNotificationsByUserId(100L);
@@ -95,6 +128,7 @@ class NotificationServiceTest {
     void getNotificationsByUserId_WhenNoNotifications_ShouldReturnEmptyList() {
         // Given
         when(notificationRepository.findByUserIdOrderByCreatedAtDesc(999L)).thenReturn(List.of());
+        when(notificationMapper.toDTOList(any())).thenReturn(List.of());
 
         // When
         List<NotificationDTO> result = notificationService.getNotificationsByUserId(999L);

@@ -1,6 +1,8 @@
 package com.pingxin403.cuckoo.order.saga.steps;
 
+import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.exception.SystemException;
 import com.pingxin403.cuckoo.order.client.ProductClient;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.ProductDTO;
@@ -36,11 +38,20 @@ public class CreateOrderStep implements SagaStep {
             CreateOrderRequest request = context.get("orderRequest");
             
             // 1. 查询商品信息
-            ProductDTO product = productClient.getProduct(request.getSkuId());
-            if (product == null) {
-                throw new ResourceNotFoundException("商品不存在: skuId=" + request.getSkuId());
+            ProductDTO product;
+            try {
+                product = productClient.getProduct(request.getSkuId());
+                if (product == null) {
+                    throw new ResourceNotFoundException("商品不存在: skuId=" + request.getSkuId());
+                }
+                log.info("查询商品信息成功: productName={}, price={}", product.getName(), product.getPrice());
+            } catch (BusinessException e) {
+                log.error("查询商品信息失败（业务异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+                throw new SagaStepException("查询商品信息失败: " + e.getMessage(), e);
+            } catch (SystemException e) {
+                log.error("查询商品信息失败（系统异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+                throw new SagaStepException("查询商品信息失败: " + e.getMessage(), e);
             }
-            log.info("查询商品信息成功: productName={}, price={}", product.getName(), product.getPrice());
             
             // 2. 创建订单
             String orderNo = generateOrderNo();
@@ -66,6 +77,8 @@ public class CreateOrderStep implements SagaStep {
             context.put("totalAmount", totalAmount);
             context.put("productName", product.getName());
             
+        } catch (SagaStepException e) {
+            throw e;
         } catch (Exception e) {
             log.error("创建订单失败", e);
             throw new SagaStepException("创建订单失败: " + e.getMessage(), e);

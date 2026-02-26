@@ -1,5 +1,7 @@
 package com.pingxin403.cuckoo.order.saga.steps;
 
+import com.pingxin403.cuckoo.common.exception.BusinessException;
+import com.pingxin403.cuckoo.common.exception.SystemException;
 import com.pingxin403.cuckoo.order.client.PaymentClient;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.CreatePaymentRequest;
@@ -43,8 +45,17 @@ public class ProcessPaymentStep implements SagaStep {
                     request.getUserId()
             );
             
-            PaymentDTO payment = paymentClient.createPayment(paymentRequest);
-            log.info("创建支付单成功: paymentId={}, orderId={}", payment.getId(), orderId);
+            PaymentDTO payment;
+            try {
+                payment = paymentClient.createPayment(paymentRequest);
+                log.info("创建支付单成功: paymentId={}, orderId={}", payment.getId(), orderId);
+            } catch (BusinessException e) {
+                log.error("创建支付单失败（业务异常）: orderId={}, error={}", orderId, e.getMessage());
+                throw new SagaStepException("创建支付单失败: " + e.getMessage(), e);
+            } catch (SystemException e) {
+                log.error("创建支付单失败（系统异常）: orderId={}, error={}", orderId, e.getMessage());
+                throw new SagaStepException("创建支付单失败: " + e.getMessage(), e);
+            }
             
             // 更新订单的支付单 ID
             Order order = orderRepository.findById(orderId).orElse(null);
@@ -56,6 +67,8 @@ public class ProcessPaymentStep implements SagaStep {
             // 保存支付单 ID 到上下文
             context.put("paymentId", payment.getId());
             
+        } catch (SagaStepException e) {
+            throw e;
         } catch (Exception e) {
             log.error("创建支付单失败", e);
             throw new SagaStepException("创建支付单失败: " + e.getMessage(), e);

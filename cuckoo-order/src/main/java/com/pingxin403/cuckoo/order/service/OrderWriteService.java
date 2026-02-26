@@ -1,6 +1,6 @@
 package com.pingxin403.cuckoo.order.service;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.EventPublisherUtil;
 import com.pingxin403.cuckoo.common.event.OrderCreatedEvent;
 import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
@@ -28,7 +28,7 @@ public class OrderWriteService {
 
     private final OrderWriteRepository orderWriteRepository;
     private final OrderItemWriteRepository orderItemWriteRepository;
-    private final EventPublisher eventPublisher;
+    private final EventPublisherUtil eventPublisher;
     private final LocalMessageService localMessageService;
 
     /**

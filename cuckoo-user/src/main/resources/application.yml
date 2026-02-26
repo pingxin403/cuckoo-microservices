@@ -1,26 +1,29 @@
-# 引入公共配置
+# Import common configuration - 引入公共配置
+# Common config provides: Actuator, OpenTelemetry, JPA, Nacos, Redis, Sentinel, Feign, Logging, Graceful Shutdown
+# 公共配置提供：监控端点、分布式追踪、JPA、Nacos、Redis、Sentinel、Feign、日志、优雅关闭
 spring:
   config:
     import: classpath:application-common.yml
 
+  # Service-specific configuration - 服务特定配置
   application:
     name: user-service
     database-name: user_db
 
-  # MySQL 数据源配置
+  # MySQL datasource configuration - MySQL 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
-    username: root
-    password: root
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
 
-  # JPA 服务特定配置
+  # JPA service-specific configuration - JPA 服务特定配置
   jpa:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
-  # Nacos 服务特定配置
+  # Nacos service-specific configuration - Nacos 服务特定配置
   cloud:
     nacos:
       config:
@@ -29,11 +32,6 @@ spring:
             group: DEFAULT_GROUP
             refresh: true
 
-# 服务端口
+# Service port - 服务端口
 server:
   port: 8081
-
-# OpenTelemetry 服务名（覆盖公共配置）
-otel:
-  service:
-    name: ${spring.application.name}

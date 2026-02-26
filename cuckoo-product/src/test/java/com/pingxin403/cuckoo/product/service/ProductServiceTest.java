@@ -49,10 +49,14 @@ class ProductServiceTest {
     @Mock
     private org.springframework.data.redis.core.ValueOperations<String, Object> valueOperations;
 
+    @Mock
+    private com.pingxin403.cuckoo.product.mapper.ProductMapper productMapper;
+
     @InjectMocks
     private ProductService productService;
 
     private Product testProduct;
+    private ProductDTO testProductDTO;
 
     @BeforeEach
     void setUp() {
@@ -65,6 +69,15 @@ class ProductServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
         
+        testProductDTO = ProductDTO.builder()
+                .id(1L)
+                .name("Test Product")
+                .price(new BigDecimal("99.99"))
+                .description("A test product description")
+                .createdAt(testProduct.getCreatedAt())
+                .updatedAt(testProduct.getUpdatedAt())
+                .build();
+        
         // Mock RedisTemplate behavior
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         
@@ -73,6 +86,35 @@ class ProductServiceTest {
         
         // Mock MultiLevelCacheManager to return null (cache miss)
         when(multiLevelCacheManager.get(anyString(), any())).thenReturn(null);
+        
+        // Mock ProductMapper
+        when(productMapper.toDTO(any(Product.class))).thenAnswer(invocation -> {
+            Product product = invocation.getArgument(0);
+            if (product == null) return null;
+            return ProductDTO.builder()
+                    .id(product.getId())
+                    .name(product.getName())
+                    .price(product.getPrice())
+                    .description(product.getDescription())
+                    .createdAt(product.getCreatedAt())
+                    .updatedAt(product.getUpdatedAt())
+                    .build();
+        });
+        
+        when(productMapper.toDTOList(anyList())).thenAnswer(invocation -> {
+            List<Product> products = invocation.getArgument(0);
+            if (products == null) return null;
+            return products.stream()
+                    .map(product -> ProductDTO.builder()
+                            .id(product.getId())
+                            .name(product.getName())
+                            .price(product.getPrice())
+                            .description(product.getDescription())
+                            .createdAt(product.getCreatedAt())
+                            .updatedAt(product.getUpdatedAt())
+                            .build())
+                    .toList();
+        });
         
         // Mock RedissonClient lock behavior
         org.redisson.api.RLock lock = mock(org.redisson.api.RLock.class);

@@ -1,6 +1,6 @@
 package com.pingxin403.cuckoo.inventory.service;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.EventPublisherUtil;
 import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
 import com.pingxin403.cuckoo.common.exception.InsufficientStockException;
@@ -12,6 +12,7 @@ import com.pingxin403.cuckoo.inventory.dto.InventoryDTO;
 import com.pingxin403.cuckoo.inventory.dto.InventoryOperationRequest;
 import com.pingxin403.cuckoo.inventory.entity.Inventory;
 import com.pingxin403.cuckoo.inventory.entity.InventoryLog;
+import com.pingxin403.cuckoo.inventory.mapper.InventoryMapper;
 import com.pingxin403.cuckoo.inventory.repository.InventoryLogRepository;
 import com.pingxin403.cuckoo.inventory.repository.InventoryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,9 +85,12 @@ class InventoryServiceTest {
         // Mock RedisTemplate behavior - set up lenient stubbing for all tests
         lenient().when(redisTemplate.opsForValue()).thenReturn(redisValueOperations);
         
-        // Mock EventPublisher and LocalMessageService
-        EventPublisher eventPublisher = mock(EventPublisher.class);
+        // Mock EventPublisherUtil and LocalMessageService
+        EventPublisherUtil eventPublisher = mock(EventPublisherUtil.class);
         LocalMessageService localMessageService = mock(LocalMessageService.class);
+        
+        // Create real InventoryMapper (no need to mock as it's a simple mapper)
+        InventoryMapper inventoryMapper = new InventoryMapper();
         
         // Manually create the service with mocked dependencies
         inventoryService = new InventoryService(
@@ -96,7 +100,8 @@ class InventoryServiceTest {
             redisTemplate,
             inventoryConfig,
             eventPublisher,
-            localMessageService
+            localMessageService,
+            inventoryMapper
         );
     }
 

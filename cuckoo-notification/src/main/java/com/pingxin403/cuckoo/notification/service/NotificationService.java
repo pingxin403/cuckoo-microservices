@@ -2,6 +2,7 @@ package com.pingxin403.cuckoo.notification.service;
 
 import com.pingxin403.cuckoo.notification.dto.NotificationDTO;
 import com.pingxin403.cuckoo.notification.entity.Notification;
+import com.pingxin403.cuckoo.notification.mapper.NotificationMapper;
 import com.pingxin403.cuckoo.notification.repository.NotificationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 通知服务
@@ -20,6 +20,9 @@ public class NotificationService {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationMapper notificationMapper;
 
     /**
      * 创建通知
@@ -36,7 +39,7 @@ public class NotificationService {
         Notification saved = notificationRepository.save(notification);
         log.info("Created notification: id={}, userId={}, orderId={}, type={}",
                 saved.getId(), userId, orderId, type);
-        return toDTO(saved);
+        return notificationMapper.toDTO(saved);
     }
 
     /**
@@ -47,22 +50,6 @@ public class NotificationService {
      */
     public List<NotificationDTO> getNotificationsByUserId(Long userId) {
         List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        return notifications.stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 将实体转换为 DTO
-     */
-    private NotificationDTO toDTO(Notification notification) {
-        return new NotificationDTO(
-                notification.getId(),
-                notification.getUserId(),
-                notification.getOrderId(),
-                notification.getType(),
-                notification.getContent(),
-                notification.getCreatedAt()
-        );
+        return notificationMapper.toDTOList(notifications);
     }
 }

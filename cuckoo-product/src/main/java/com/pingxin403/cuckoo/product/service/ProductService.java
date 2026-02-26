@@ -6,6 +6,7 @@ import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.product.dto.CreateProductRequest;
 import com.pingxin403.cuckoo.product.dto.ProductDTO;
 import com.pingxin403.cuckoo.product.entity.Product;
+import com.pingxin403.cuckoo.product.mapper.ProductMapper;
 import com.pingxin403.cuckoo.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 商品服务
@@ -35,6 +35,7 @@ public class ProductService {
     private final MultiLevelCacheManager cacheManager;
     private final BloomFilterService bloomFilterService;
     private final RedissonClient redissonClient;
+    private final ProductMapper productMapper;
 
     private static final String CACHE_KEY_PREFIX = "product:";
     private static final String LOCK_KEY_PREFIX = "lock:product:";
@@ -58,7 +59,7 @@ public class ProductService {
         // 将商品 ID 添加到布隆过滤器
         bloomFilterService.add(String.valueOf(savedProduct.getId()));
         
-        return toDTO(savedProduct);
+        return productMapper.toDTO(savedProduct);
     }
 
     /**
@@ -106,7 +107,7 @@ public class ProductService {
                     Product product = productRepository.findById(id)
                             .orElseThrow(() -> new ResourceNotFoundException("Product", id));
                     
-                    ProductDTO productDTO = toDTO(product);
+                    ProductDTO productDTO = productMapper.toDTO(product);
                     
                     // 写入缓存，使用随机 TTL 防止缓存雪崩
                     Duration ttl = Duration.ofMinutes(CACHE_TTL_MINUTES + ThreadLocalRandom.current().nextInt(10));
@@ -134,9 +135,7 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public List<ProductDTO> getAllProducts() {
-        return productRepository.findAll().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return productMapper.toDTOList(productRepository.findAll());
     }
 
     /**
@@ -171,20 +170,6 @@ public class ProductService {
         cacheManager.evict(cacheKey);
         log.debug("Product cache evicted: id={}", id);
         
-        return toDTO(updatedProduct);
-    }
-
-    /**
-     * 将 Product 实体转换为 ProductDTO
-     */
-    private ProductDTO toDTO(Product product) {
-        return ProductDTO.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .price(product.getPrice())
-                .description(product.getDescription())
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
-                .build();
+        return productMapper.toDTO(updatedProduct);
     }
 }

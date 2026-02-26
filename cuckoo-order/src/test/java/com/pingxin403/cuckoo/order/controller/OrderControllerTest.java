@@ -94,7 +94,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())  // Changed from isOk() to isCreated() for HTTP 201
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.orderNo").value("ORD123456"))
                 .andExpect(jsonPath("$.status").value("PENDING_PAYMENT"))

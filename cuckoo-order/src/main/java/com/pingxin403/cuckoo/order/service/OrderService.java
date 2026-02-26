@@ -1,15 +1,18 @@
 package com.pingxin403.cuckoo.order.service;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.EventPublisherUtil;
 import com.pingxin403.cuckoo.common.event.OrderCancelledEvent;
 import com.pingxin403.cuckoo.common.event.OrderCreatedEvent;
+import com.pingxin403.cuckoo.common.exception.BusinessException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
+import com.pingxin403.cuckoo.common.exception.SystemException;
 import com.pingxin403.cuckoo.common.message.LocalMessageService;
 import com.pingxin403.cuckoo.order.client.InventoryClient;
 import com.pingxin403.cuckoo.order.client.PaymentClient;
 import com.pingxin403.cuckoo.order.client.ProductClient;
 import com.pingxin403.cuckoo.order.dto.*;
 import com.pingxin403.cuckoo.order.entity.Order;
+import com.pingxin403.cuckoo.order.mapper.OrderMapper;
 import com.pingxin403.cuckoo.order.repository.OrderRepository;
 import com.pingxin403.cuckoo.order.saga.OrderSagaDefinition;
 import com.pingxin403.cuckoo.order.saga.SagaDefinition;
@@ -37,10 +40,11 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderMapper orderMapper;
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
     private final PaymentClient paymentClient;
-    private final EventPublisher eventPublisher;
+    private final EventPublisherUtil eventPublisher;
     private final LocalMessageService localMessageService;
     private final SagaOrchestrator sagaOrchestrator;
     private final OrderSagaDefinition orderSagaDefinition;
@@ -58,11 +62,20 @@ public class OrderService {
                 request.getUserId(), request.getSkuId(), request.getQuantity());
 
         // 1. 查询商品信息
-        ProductDTO product = productClient.getProduct(request.getSkuId());
-        if (product == null) {
-            throw new ResourceNotFoundException("商品不存在: skuId=" + request.getSkuId());
+        ProductDTO product;
+        try {
+            product = productClient.getProduct(request.getSkuId());
+            if (product == null) {
+                throw new ResourceNotFoundException("商品不存在: skuId=" + request.getSkuId());
+            }
+            log.info("查询商品信息成功: productName={}, price={}", product.getName(), product.getPrice());
+        } catch (BusinessException e) {
+            log.error("查询商品信息失败（业务异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+            throw e;
+        } catch (SystemException e) {
+            log.error("查询商品信息失败（系统异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+            throw e;
         }
-        log.info("查询商品信息成功: productName={}, price={}", product.getName(), product.getPrice());
 
         // 2. 预占库存
         String orderNo = generateOrderNo();
@@ -71,9 +84,17 @@ public class OrderService {
                 request.getQuantity(),
                 orderNo
         );
-        inventoryClient.reserveInventory(reserveRequest);
-        log.info("预占库存成功: skuId={}, quantity={}, orderNo={}", 
-                request.getSkuId(), request.getQuantity(), orderNo);
+        try {
+            inventoryClient.reserveInventory(reserveRequest);
+            log.info("预占库存成功: skuId={}, quantity={}, orderNo={}", 
+                    request.getSkuId(), request.getQuantity(), orderNo);
+        } catch (BusinessException e) {
+            log.error("预占库存失败（业务异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+            throw e;
+        } catch (SystemException e) {
+            log.error("预占库存失败（系统异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+            throw e;
+        }
 
         // 3. 创建订单（状态为待支付）
         BigDecimal totalAmount = product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity()));
@@ -97,12 +118,21 @@ public class OrderService {
                 totalAmount,
                 request.getUserId()
         );
-        PaymentDTO payment = paymentClient.createPayment(paymentRequest);
-        
-        // 更新订单的支付单 ID
-        order.setPaymentId(payment.getId());
-        order = orderRepository.save(order);
-        log.info("创建支付单成功: paymentId={}, orderId={}", payment.getId(), order.getId());
+        PaymentDTO payment;
+        try {
+            payment = paymentClient.createPayment(paymentRequest);
+            
+            // 更新订单的支付单 ID
+            order.setPaymentId(payment.getId());
+            order = orderRepository.save(order);
+            log.info("创建支付单成功: paymentId={}, orderId={}", payment.getId(), order.getId());
+        } catch (BusinessException e) {
+            log.error("创建支付单失败（业务异常）: orderId={}, error={}", order.getId(), e.getMessage());
+            throw e;
+        } catch (SystemException e) {
+            log.error("创建支付单失败（系统异常）: orderId={}, error={}", order.getId(), e.getMessage());
+            throw e;
+        }
 
         // 5. 在同一事务中保存 OrderCreatedEvent 到本地消息表
         OrderCreatedEvent event = OrderCreatedEvent.create(
@@ -125,7 +155,7 @@ public class OrderService {
             // 消息保持 PENDING 状态，等待定时任务重试
         }
 
-        return OrderDTO.fromEntity(order);
+        return orderMapper.toDTO(order);
     }
     
     /**
@@ -160,7 +190,7 @@ public class OrderService {
     public OrderDTO getOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("订单不存在: id=" + id));
-        return OrderDTO.fromEntity(order);
+        return orderMapper.toDTO(order);
     }
 
     /**
@@ -169,9 +199,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderDTO> getUserOrders(Long userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
-        return orders.stream()
-                .map(OrderDTO::fromEntity)
-                .collect(Collectors.toList());
+        return orderMapper.toDTOList(orders);
     }
 
     /**
@@ -217,7 +245,7 @@ public class OrderService {
             // 消息保持 PENDING 状态，等待定时任务重试
         }
 
-        return OrderDTO.fromEntity(order);
+        return orderMapper.toDTO(order);
     }
 
     /**

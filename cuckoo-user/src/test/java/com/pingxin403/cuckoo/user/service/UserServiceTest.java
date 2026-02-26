@@ -5,6 +5,7 @@ import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.user.dto.*;
 import com.pingxin403.cuckoo.user.entity.User;
+import com.pingxin403.cuckoo.user.mapper.UserMapper;
 import com.pingxin403.cuckoo.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,10 +42,14 @@ class UserServiceTest {
     @Mock
     private org.springframework.data.redis.core.ValueOperations<String, Object> valueOperations;
 
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private UserService userService;
 
     private User testUser;
+    private UserDTO testUserDTO;
 
     @BeforeEach
     void setUp() {
@@ -57,8 +62,29 @@ class UserServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
         
+        testUserDTO = UserDTO.builder()
+                .id(1L)
+                .username("testuser")
+                .email("test@example.com")
+                .createdAt(testUser.getCreatedAt())
+                .updatedAt(testUser.getUpdatedAt())
+                .build();
+        
         // Mock RedisTemplate behavior
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        
+        // Mock UserMapper behavior
+        when(userMapper.toDTO(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user == null) return null;
+            return UserDTO.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .createdAt(user.getCreatedAt())
+                    .updatedAt(user.getUpdatedAt())
+                    .build();
+        });
     }
 
     // ========== Register Tests ==========

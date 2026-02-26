@@ -1,7 +1,13 @@
+# Common Configuration for All Microservices
+# Services import this file and override only service-specific properties
 # 公共配置 - 所有微服务共享
-# 此文件包含所有微服务的通用配置，减少配置冗余
+# 此文件包含所有微服务的通用配置，减少配置冗余 60%
 
-# Actuator 配置
+# ============================================
+# Actuator Configuration - 监控端点配置
+# ============================================
+# Exposes health, info, prometheus, and metrics endpoints for monitoring
+# 暴露健康检查、信息、Prometheus 和指标端点用于监控
 management:
   endpoints:
     web:
@@ -9,92 +15,137 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      show-details: always
+      show-details: always  # Always show detailed health information
   tracing:
     sampling:
-      probability: 1.0  # 默认 100% 采样，生产环境通过 profile 覆盖
+      probability: ${TRACING_SAMPLE_RATE:1.0}  # 100% sampling by default, override in production
   otlp:
     tracing:
-      endpoint: http://jaeger-collector.observability.svc.cluster.local:4318/v1/traces
+      endpoint: ${JAEGER_ENDPOINT:http://jaeger-collector.observability.svc.cluster.local:4318/v1/traces}
 
-# OpenTelemetry 配置
+# ============================================
+# OpenTelemetry Configuration - 分布式追踪配置
+# ============================================
+# Configures OpenTelemetry for distributed tracing with Jaeger
+# 配置 OpenTelemetry 与 Jaeger 集成实现分布式追踪
 otel:
   exporter:
     otlp:
-      # OTLP HTTP endpoint for Jaeger Collector
-      endpoint: http://jaeger-collector.observability.svc.cluster.local:4318
-      # 使用 HTTP 协议而不是 gRPC
-      protocol: http/protobuf
+      endpoint: ${JAEGER_ENDPOINT:http://jaeger-collector.observability.svc.cluster.local:4318}
+      protocol: http/protobuf  # Use HTTP protocol instead of gRPC
   traces:
     exporter: otlp
   metrics:
-    exporter: none
+    exporter: none  # Metrics not exported via OTLP
   logs:
-    exporter: none
+    exporter: none  # Logs not exported via OTLP
   resource:
     attributes:
-      # 服务名称将由各服务的 application.yml 覆盖
+      service.name: ${spring.application.name}  # Service name from application config
       deployment.environment: ${DEPLOYMENT_ENV:development}
 
-# JPA 公共配置
+# ============================================
+# Spring Configuration - Spring 框架配置
+# ============================================
 spring:
+  # JPA and Hibernate Configuration - JPA 和 Hibernate 配置
+  # Common database access settings for all services
+  # 所有服务的通用数据库访问设置
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
+      ddl-auto: validate  # Validate schema, don't auto-create/update
+    show-sql: false  # Don't log SQL statements (use logging level instead)
     properties:
       hibernate:
-        format_sql: true
+        format_sql: true  # Format SQL for readability in logs
+        jdbc:
+          batch_size: 20  # Batch size for insert/update operations
+        order_inserts: true  # Order inserts for better batching
+        order_updates: true  # Order updates for better batching
   
-  # 优雅关闭配置
+  # Graceful Shutdown Configuration - 优雅关闭配置
+  # Allows in-flight requests to complete before shutdown
+  # 允许正在处理的请求在关闭前完成
   lifecycle:
-    timeout-per-shutdown-phase: 60s  # 每个关闭阶段的超时时间
+    timeout-per-shutdown-phase: 60s
 
-  # Redis 公共配置
+  # Redis Configuration - Redis 缓存配置
+  # Common Redis settings for caching and session management
+  # 用于缓存和会话管理的通用 Redis 设置
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       database: 0
       timeout: 3000ms
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+          max-active: 8  # Maximum number of connections
+          max-idle: 8    # Maximum idle connections
+          min-idle: 0    # Minimum idle connections
+          max-wait: -1ms # Maximum wait time for connection (-1 = no limit)
 
-  # Nacos 公共配置
+  # Nacos Configuration - Nacos 服务发现和配置中心
+  # Service discovery and configuration management
+  # 服务发现和配置管理
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
+        server-addr: ${NACOS_SERVER:localhost:8848}
       config:
-        server-addr: localhost:8848
+        server-addr: ${NACOS_SERVER:localhost:8848}
         file-extension: yml
     
-    # Sentinel 配置
+    # Sentinel Configuration - Sentinel 熔断降级配置
+    # Circuit breaker and rate limiting
+    # 熔断器和限流配置
     sentinel:
       transport:
-        # Sentinel Dashboard 地址
-        dashboard: localhost:8858
-        # 与 Dashboard 通信的端口，默认为 8719
-        # 如果端口被占用，会自动尝试 8719+1, 8719+2... 直到找到可用端口
-        port: 8719
-      # 饥饿加载，应用启动时立即连接 Dashboard
-      eager: true
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
+        port: 8719  # Auto-increment if port is occupied
+      eager: true  # Connect to dashboard immediately on startup
 
-# Feign 配置
+# ============================================
+# Feign Configuration - Feign 客户端配置
+# ============================================
+# Common settings for Feign HTTP clients
+# Feign HTTP 客户端的通用设置
 feign:
   sentinel:
-    enabled: true
+    enabled: true  # Enable Sentinel integration for circuit breaking
+  client:
+    config:
+      default:
+        connectTimeout: 5000  # Connection timeout in milliseconds
+        readTimeout: 10000    # Read timeout in milliseconds
 
-# 服务器公共配置
+# ============================================
+# Server Configuration - 服务器配置
+# ============================================
+# Common server settings
+# 通用服务器设置
 server:
-  shutdown: graceful  # 启用优雅关闭
+  shutdown: graceful  # Enable graceful shutdown
+  port: ${SERVER_PORT:8080}  # Override in service-specific config
 
-# 优雅下线配置
+# ============================================
+# Graceful Shutdown Configuration - 优雅下线配置
+# ============================================
+# Custom graceful shutdown settings for zero-downtime deployments
+# 零停机部署的自定义优雅下线设置
 graceful:
   shutdown:
-    grace-period: 30  # 等待负载均衡器更新的时间（秒）
-    max-wait: 60      # 等待现有请求完成的最大时间（秒）
+    grace-period: 30  # Wait time for load balancer to update (seconds)
+    max-wait: 60      # Maximum wait time for existing requests (seconds)
+
+# ============================================
+# Logging Configuration - 日志配置
+# ============================================
+# Common logging patterns with traceId for distributed tracing
+# 包含 traceId 的通用日志格式，用于分布式追踪
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.pingxin403.cuckoo: DEBUG

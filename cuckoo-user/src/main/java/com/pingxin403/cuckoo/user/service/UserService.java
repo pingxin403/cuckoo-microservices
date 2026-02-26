@@ -5,6 +5,7 @@ import com.pingxin403.cuckoo.common.exception.DuplicateResourceException;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
 import com.pingxin403.cuckoo.user.dto.*;
 import com.pingxin403.cuckoo.user.entity.User;
+import com.pingxin403.cuckoo.user.mapper.UserMapper;
 import com.pingxin403.cuckoo.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserMapper userMapper;
 
     private static final String CACHE_KEY_PREFIX = "user:";
     private static final long CACHE_TTL_MINUTES = 15;
@@ -59,7 +61,7 @@ public class UserService {
         User savedUser = userRepository.save(user);
         log.info("User registered successfully: username={}, id={}", savedUser.getUsername(), savedUser.getId());
 
-        return toDTO(savedUser);
+        return userMapper.toDTO(savedUser);
     }
 
     /**
@@ -109,7 +111,7 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
         
-        UserDTO userDTO = toDTO(user);
+        UserDTO userDTO = userMapper.toDTO(user);
         
         // 3. 将查询结果写入缓存，设置 TTL 为 15 分钟
         redisTemplate.opsForValue().set(cacheKey, userDTO, CACHE_TTL_MINUTES, TimeUnit.MINUTES);
@@ -148,7 +150,7 @@ public class UserService {
         redisTemplate.delete(cacheKey);
         log.debug("User cache deleted: id={}", id);
         
-        return toDTO(updatedUser);
+        return userMapper.toDTO(updatedUser);
     }
 
     /**
@@ -158,18 +160,5 @@ public class UserService {
     private String generateSimpleToken(User user) {
         String raw = user.getId() + ":" + user.getUsername() + ":" + System.currentTimeMillis();
         return java.util.Base64.getEncoder().encodeToString(raw.getBytes());
-    }
-
-    /**
-     * 将 User 实体转换为 UserDTO（不含密码）
-     */
-    private UserDTO toDTO(User user) {
-        return UserDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
     }
 }

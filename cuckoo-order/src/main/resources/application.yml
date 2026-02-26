@@ -1,28 +1,31 @@
-# 引入公共配置
+# Import common configuration - 引入公共配置
+# Common config provides: Actuator, OpenTelemetry, JPA, Nacos, Redis, Sentinel, Feign, Logging, Graceful Shutdown
+# 公共配置提供：监控端点、分布式追踪、JPA、Nacos、Redis、Sentinel、Feign、日志、优雅关闭
 spring:
   config:
     import: classpath:application-common.yml
 
+  # Service-specific configuration - 服务特定配置
   application:
     name: order-service
     database-name: order_db
 
-  # MySQL 数据源配置
+  # MySQL datasource configuration - MySQL 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
-    username: root
-    password: root
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
 
-  # JPA 服务特定配置
+  # JPA service-specific configuration - JPA 服务特定配置
   jpa:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
-  # Kafka 配置
+  # Kafka configuration (service-specific) - Kafka 配置（服务特定）
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: order-service-group
       auto-offset-reset: earliest
@@ -35,7 +38,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-  # Nacos 服务特定配置
+  # Nacos service-specific configuration - Nacos 服务特定配置
   cloud:
     nacos:
       config:
@@ -43,17 +46,12 @@ spring:
           - data-id: shared-config.yml
             group: DEFAULT_GROUP
             refresh: true
-    # Sentinel 熔断降级配置
-    sentinel:
-      transport:
-        dashboard: localhost:8080
-        port: 8719
 
-# 服务端口
+# Service port - 服务端口
 server:
   port: 8084
 
-# Seata 分布式事务配置
+# Seata distributed transaction configuration - Seata 分布式事务配置
 seata:
   enabled: true
   tx-service-group: cuckoo_tx_group
@@ -61,27 +59,12 @@ seata:
     vgroup-mapping:
       cuckoo_tx_group: default
 
-# OpenFeign 配置
-feign:
-  sentinel:
-    enabled: true
-  client:
-    config:
-      default:
-        connectTimeout: 3000
-        readTimeout: 3000
-
-# 订单服务自定义配置
+# Order service custom configuration - 订单服务自定义配置
 order:
   timeout:
     minutes: 30
 
-# OpenTelemetry 服务名（覆盖公共配置）
-otel:
-  service:
-    name: ${spring.application.name}
-
-# SpringDoc OpenAPI 配置
+# SpringDoc OpenAPI configuration - SpringDoc OpenAPI 配置
 springdoc:
   api-docs:
     enabled: true

@@ -1,32 +1,44 @@
-# 引入公共配置
+# Import common configuration - 引入公共配置
+# Common config provides: Actuator, OpenTelemetry, JPA, Nacos, Redis, Sentinel, Feign, Logging, Graceful Shutdown
+# 公共配置提供：监控端点、分布式追踪、JPA、Nacos、Redis、Sentinel、Feign、日志、优雅关闭
 spring:
   config:
     import: classpath:application-common.yml
 
+  # Service-specific configuration - 服务特定配置
   application:
     name: payment-service
     database-name: payment_db
 
-  # Kafka 配置（额外配置，补充共享配置）
+  # MySQL datasource configuration - MySQL 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/${spring.application.database-name}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+
+  # JPA service-specific configuration - JPA 服务特定配置
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # Kafka service-specific configuration - Kafka 服务特定配置
   kafka:
     consumer:
       group-id: payment-service-group
     listener:
       ack-mode: manual
 
-  # Nacos 服务特定配置
+  # Nacos service-specific configuration - Nacos 服务特定配置
   cloud:
     nacos:
       config:
         shared-configs:
           - data-id: shared-config.yml
+            group: DEFAULT_GROUP
             refresh: true
 
-# 服务端口
+# Service port - 服务端口
 server:
   port: 8085
-
-# OpenTelemetry 服务名（覆盖公共配置）
-otel:
-  service:
-    name: ${spring.application.name}

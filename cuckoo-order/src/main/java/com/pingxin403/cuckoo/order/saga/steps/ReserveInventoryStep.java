@@ -1,5 +1,7 @@
 package com.pingxin403.cuckoo.order.saga.steps;
 
+import com.pingxin403.cuckoo.common.exception.BusinessException;
+import com.pingxin403.cuckoo.common.exception.SystemException;
 import com.pingxin403.cuckoo.order.client.InventoryClient;
 import com.pingxin403.cuckoo.order.dto.CreateOrderRequest;
 import com.pingxin403.cuckoo.order.dto.ReserveInventoryRequest;
@@ -36,10 +38,20 @@ public class ReserveInventoryStep implements SagaStep {
                     orderNo
             );
             
-            inventoryClient.reserveInventory(reserveRequest);
-            log.info("预留库存成功: skuId={}, quantity={}, orderNo={}", 
-                    request.getSkuId(), request.getQuantity(), orderNo);
+            try {
+                inventoryClient.reserveInventory(reserveRequest);
+                log.info("预留库存成功: skuId={}, quantity={}, orderNo={}", 
+                        request.getSkuId(), request.getQuantity(), orderNo);
+            } catch (BusinessException e) {
+                log.error("预留库存失败（业务异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+                throw new SagaStepException("预留库存失败: " + e.getMessage(), e);
+            } catch (SystemException e) {
+                log.error("预留库存失败（系统异常）: skuId={}, error={}", request.getSkuId(), e.getMessage());
+                throw new SagaStepException("预留库存失败: " + e.getMessage(), e);
+            }
             
+        } catch (SagaStepException e) {
+            throw e;
         } catch (Exception e) {
             log.error("预留库存失败", e);
             throw new SagaStepException("预留库存失败: " + e.getMessage(), e);

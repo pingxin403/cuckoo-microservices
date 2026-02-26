@@ -27,7 +27,7 @@ class PaymentServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private EventPublisher eventPublisher;
+    private com.pingxin403.cuckoo.common.event.EventPublisherUtil eventPublisher;
 
     @Mock
     private LocalMessageService localMessageService;
@@ -63,6 +63,12 @@ class PaymentServiceTest {
         testPayment.setStatus(Payment.PaymentStatus.SUCCESS);
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(testPayment));
         when(paymentRepository.save(any(Payment.class))).thenReturn(testPayment);
+        
+        // Mock eventPublisher to return a completed future with proper type
+        org.springframework.kafka.support.SendResult<String, com.pingxin403.cuckoo.common.event.DomainEvent> mockSendResult = 
+            mock(org.springframework.kafka.support.SendResult.class);
+        when(eventPublisher.publish(anyString(), anyString(), any()))
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(mockSendResult));
 
         Payment result = paymentService.confirmPayment(1L);
 

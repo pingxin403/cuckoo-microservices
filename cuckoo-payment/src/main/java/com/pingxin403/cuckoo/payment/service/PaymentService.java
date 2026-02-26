@@ -1,6 +1,6 @@
 package com.pingxin403.cuckoo.payment.service;
 
-import com.pingxin403.cuckoo.common.event.EventPublisher;
+import com.pingxin403.cuckoo.common.event.EventPublisherUtil;
 import com.pingxin403.cuckoo.common.event.PaymentFailedEvent;
 import com.pingxin403.cuckoo.common.event.PaymentSuccessEvent;
 import com.pingxin403.cuckoo.common.exception.ResourceNotFoundException;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final EventPublisher eventPublisher;
+    private final EventPublisherUtil eventPublisher;
     private final LocalMessageService localMessageService;
 
     private static final String PAYMENT_EVENTS_TOPIC = "payment-events";

@@ -1,6 +1,5 @@
 package com.pingxin403.cuckoo.payment.dto;
 
-import com.pingxin403.cuckoo.payment.entity.Payment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,16 +18,4 @@ public class PaymentDTO {
     private String status;
     private Instant createdAt;
     private Instant updatedAt;
-
-    public static PaymentDTO fromEntity(Payment payment) {
-        return new PaymentDTO(
-                payment.getId(),
-                payment.getOrderId(),
-                payment.getUserId(),
-                payment.getAmount(),
-                payment.getStatus().name(),
-                payment.getCreatedAt(),
-                payment.getUpdatedAt()
-        );
-    }
 }
